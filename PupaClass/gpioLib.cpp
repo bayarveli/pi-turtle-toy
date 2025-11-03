@@ -96,8 +96,13 @@ int IMGPIO::ExportGpio()
 	// HATA02
 	if (i_status_value < 0)
 	{
+		if (errno == EBUSY) {
+			printf("GPIO %s is already exported - continuing.\n", this->str_pin_number.c_str());
+			close(this->i_export_fd);
+			return 0; // success
+		}
 		perror("IMGPIO: SYSFS GPIO export aygitina yazarken hata olustu.");
-        exit(1);
+        	exit(1);
 	}
 
 	i_status_value = close(this->i_export_fd);
