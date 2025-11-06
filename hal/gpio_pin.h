@@ -1,251 +1,87 @@
-#ifdef English_dox
-/**
- * \file   IMGPIO.h
- * \author Mehmet Akcakoca (mehmet.akcakoca@inovasyonmuhendislik.com)
- * \date   Mar, 2015
- * \brief Controls GPIO's of Raspberry Pi.
- *
- * \details
- *
- * This class uses the "Linux approach" (sysfs).
- * Linux already has a built-in driver for safely accessing the GPIOs.
- * It basically views each property of each GPIO pin as a file.
- * This is the preferred method of GPIO access.
- * One disadvantage of this approach is that it tends to make for slower (but safer) GPIO pin toggling.
- *
- */
-#endif
-#ifdef Turkish_dox
-/**
- * \file   IMGPIO.h
- * \author Mehmet Akcakoca (mehmet.akcakoca@inovasyonmuhendislik.com)
- * \date   Mar, 2015
- * \brief Raspberry Pi üzerindeki GPIO'ları kontrol eden sınıftır.
- * \details
- * Bu sınıf "Linux yaklaşımı" adı verilen yöntem kullanılmaktadır.
- * Linux'te GPIO'lara güvenli erişebilmek için driver yazılmıştır.
- * Her bir GPIO için birer dosya üzerinden kontrol edilebilmektedir.
- * Bu yöntemin dezavantjı, GPIO seviye değiştirme hızının düşük olmasıdır.
- *
- */
-#endif
+// GPIO pin control for Raspberry Pi using Linux sysfs interface.
+// Provides safe hardware abstraction for GPIO operations.
 
 #ifndef HAL_GPIO_PIN_H_
 #define HAL_GPIO_PIN_H_
 
-
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <sys/poll.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <iostream>
+#include <sstream>
 #include <string>
-#include <signal.h>
+#include <stdexcept>
+#include <array>
 
-using namespace std;
+class GpioPin {
+ public:
+  static inline const std::string RISING = "rising";
+  static inline const std::string FALLING = "falling";
+  static inline const std::string BOTH = "both";
 
+  static inline const std::string OUTPUT = "out";
+  static inline const std::string INPUT = "in";
 
-//bool g_b_exit_signal = false;
+  static inline const std::string HIGH = "1";
+  static inline const std::string LOW = "0";
 
-// Callback function pointer.
-typedef void(*CallbackFunctionPtr)(void*, int);
-void CatchSignal(int i_sig);
+  static inline const std::string GPIO0 = "0";
+  static inline const std::string GPIO1 = "1";
+  static inline const std::string GPIO2 = "2";
+  static inline const std::string GPIO3 = "3";
+  static inline const std::string GPIO4 = "4";
+  static inline const std::string GPIO5 = "5";
+  static inline const std::string GPIO6 = "6";
+  static inline const std::string GPIO7 = "7";
+  static inline const std::string GPIO8 = "8";
+  static inline const std::string GPIO9 = "9";
+  static inline const std::string GPIO10 = "10";
+  static inline const std::string GPIO11 = "11";
+  static inline const std::string GPIO12 = "12";
+  static inline const std::string GPIO13 = "13";
 
-class GpioPin
-{
-public:
-	#ifdef English_dox
-	//! Constructor
-	/**
-	 *
-	 */
-	#endif
+  static constexpr int INVALID_FD = -1;
 
-	#ifdef Turkish_dox
-	//! Constructor
-	/**
-	 *
-	 */
-	#endif
-	GpioPin();
+  // Constructor with specific GPIO pin number
+  explicit GpioPin(const std::string& pin_number);
 
-	#ifdef English_dox
-	//! Constructor
-	/**
-	 * \param str_pin_number
-	 */
-	#endif
+  ~GpioPin();
 
-	#ifdef Turkish_dox
-	//! Constructor
-	/**
-	 * \param str_pin_number
-	 */
-	#endif
-	GpioPin(string str_pin_number);
+  // Set GPIO pin direction (INPUT or OUTPUT)
+  // Returns negative value on error, >=0 on success
+  int set_direction(const std::string& direction);
 
-	~GpioPin();
+  // Set GPIO pin value (HIGH or LOW)
+  // Returns negative value on error, >=0 on success
+  int set_value(const std::string& value);
 
-	#ifdef English_dox
-	//! Sets pin direction
-	/**
-	 * Detailed
-	 * \param str_direction IMGPIO::INPUT or IMGPIO::OUTPUT
-	 * \retval <0 if there is an error
-	 * \retval >=0 no error
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! Costructor'da girilen pin girdi yada çıktı olarak ayarlayan fonksiyondur.
-	/**
-	 *
-	 * \param str_direction Giriş için; IMGPIO::INPUT ya da Çıkış için; IMGPIO::OUTPUT
-	 * \retval <0 hata varsa
-	 * \retval >=0 hata yoksa
-	 */
-	#endif
-	int SetPinDirection(string str_direction);
+  // Get current GPIO pin value
+  // Returns negative value on error, >=0 on success
+  int get_value(std::string& value);
 
-//	int SetInterruptMode(string str_int_mode);
+  // Get the GPIO pin number set in constructor
+  std::string get_number() const;
 
-	#ifdef English_dox
-	//! Sets pin value
-	/**
-	 * \param str_value IMGPIO::HIGH or IMGPIO::LOW
-	 * \retvat <0 if there ise an error
-	 * \retval >=0 no error
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! Pin değeri atayan fonksiyondur.
-	/**
-	 *
-	 * \param str_value IMGPIO::HIGH ya da IMGPIO::LOW
-	 * \retval <0 hata varsa
-	 * \retval >=0 hata yoksa
-	 */
-	#endif
-	int SetPinValue(string str_value);
+ private:
+  // Export GPIO pin to make it available for use
+  int export_gpio();
 
-	#ifdef English_dox
-	//! Gets pin value
-	/**
-	 * Detailed
-	 * \param & str_value is pin value read.  (IMGPIO::HIGH or IMGPIO::LOW)
-	 * \retvat <0 if there ise an error
-	 * \retval >=0 no error
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! Pin değerini okuyan fonksiyondur.
-	/**
-	 * \param & str_value Okunan pin değeridir. (IMGPIO::HIGH ya da IMGPIO::LOW)
-	 * \retval <0 hata varsa
-	 * \retval >=0 hata yoksa
-	 */
-	#endif
-	int GetPinValue(string & str_value);
+  // Unexport GPIO pin when done
+  int unexport_gpio();
 
-	#ifdef English_dox
-	//! Returns pin number is set in Constructor.
-	/**
-	 *
-	 * \return pin number
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! Constructor'da girilen pin numarasını döndüren fonksiyondur.
-	/**
-	 * \return pin değeridir.
-	 */
-	#endif
-	string GetPinNumber() const;
-
-//	void SetCallback(CallbackFunctionPtr _callback_function, void *p);
-
-	//! Constant Değişkenler.
-
-	static const string RISING;
-	static const string FALLING;
-	static const string BOTH;
-
-	static const string OUTPUT;
-	static const string INPUT;
-
-	static const string HIGH;
-	static const string LOW;
-
-	static const string GPIO0;
-	static const string GPIO1;
-	static const string GPIO2;
-	static const string GPIO3;
-	static const string GPIO4;
-	static const string GPIO5;
-	static const string GPIO6;
-	static const string GPIO7;
-	static const string GPIO8;
-	static const string GPIO9;
-	static const string GPIO10;
-	static const string GPIO11;
-	static const string GPIO12;
-	static const string GPIO13;
-
-private:
-
-	#ifdef English_dox
-	//! Exports GPIO pin
-	/**
-	 * \retvat <0 if there ise an error
-	 * \retval >=0 no error
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! GPIO pinini kullanıma açar.
-	/**
-	 * \retval <0 hata varsa
-	 * \retval >=0 hata yoksa
-	 */
-	#endif
-    int ExportGpio();
-
-	#ifdef English_dox
-	//! Unexports GPIO pin
-	/**
-	 * \retvat <0 if there ise an error
-	 * \retval >=0 no error
-	 */
-	#endif
-	#ifdef Turkish_dox
-	//! GPIO pinini kullanıma kapatır.
-	/**
-	 * \retval <0 hata varsa
-	 * \retval >=0 hata yoksa
-	 */
-	#endif
-	int UnexportGpio();
-
-//	int PollGpio();
-
-	int i_value_fd;
-	int i_direction_fd;
-	int i_export_fd;
-	int i_unexport_fd;
-	int i_edge_fd;
-	string str_pin_number;
-//	CallbackFunctionPtr callback_function;
-//	void *p_v_callback_pointer;
-//	string str_interrupt_mode;
-
-//	bool b_exit_signal;
-//	void CatchSignal(int i_sig);
-
-
+  int value_fd;
+  int direction_fd;
+  int export_fd;
+  int unexport_fd;
+  int edge_fd;
+  std::string pin_number;
 };
 
 #endif /* HAL_GPIO_PIN_H_ */
