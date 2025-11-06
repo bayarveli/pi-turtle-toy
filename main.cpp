@@ -15,8 +15,8 @@
 #include <linux/joystick.h>
 #include <linux/input.h>
 
-#include "PupaClass/gpioLib.h"
-#include "PupaClass/pwmLib.h"
+#include "hal/gpioLib.h"
+#include "hal/pwmLib.h"
 
 struct Joystick
 {

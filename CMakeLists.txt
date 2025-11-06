@@ -3,8 +3,8 @@ project(JoyBot VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(JoyBot 
     main.cpp
-    PupaClass/gpioLib.cpp
-    PupaClass/pwmLib.cpp
+    hal/gpioLib.cpp
+    hal/pwmLib.cpp
 )
 
 include(CTest)
