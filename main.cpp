@@ -15,8 +15,8 @@
 #include <linux/joystick.h>
 #include <linux/input.h>
 
-#include "PupaClass/gpioLib.h"
-#include "PupaClass/pwmLib.h"
+#include "hal/gpio_pin.h"
+#include "hal/pwmLib.h"
 
 struct Joystick
 {
@@ -100,30 +100,30 @@ int main()
 	 * Raspberry Pin 16 -> IN1 (Red Cable)
 	 * Raspberry Pin 18 -> IN2 (Green Cable)
 	 * */
-	IMGPIO rightMotorInput1("535");
-	IMGPIO rightMotorInput2("536");
+	GpioPin right_motor_in1("535");
+	GpioPin right_motor_in2("536");
 
 	/*
 	 * Raspberry Pin 29 -> IN3 (Blue Cable)
 	 * Raspberry Pin 31 -> IN4 (Orange Cable)
 	 * */
-	IMGPIO leftMotorInput1("517");
-	IMGPIO leftMotorInput2("518");
+	GpioPin left_motor_in1("517");
+	GpioPin left_motor_in2("518");
 	/*Set direction pins as output*/
-	rightMotorInput1.SetPinDirection(IMGPIO::OUTPUT);
-	rightMotorInput2.SetPinDirection(IMGPIO::OUTPUT);
-	leftMotorInput1.SetPinDirection(IMGPIO::OUTPUT);
-	leftMotorInput2.SetPinDirection(IMGPIO::OUTPUT);
+	right_motor_in1.set_direction(GpioPin::OUTPUT);
+	right_motor_in2.set_direction(GpioPin::OUTPUT);
+	left_motor_in1.set_direction(GpioPin::OUTPUT);
+	left_motor_in2.set_direction(GpioPin::OUTPUT);
 
 	/*PWM */
 	/* Raspberry Pin 12 -> ENA (Gray Cable) */
 	/* Raspberry Pin 33 -> ENB (Purple Cable) */
 	PWM MotorPWM(1000.0,256,80.0,PWM::MSMODE);
 
-	rightMotorInput1.SetPinValue(IMGPIO::LOW);
-	rightMotorInput2.SetPinValue(IMGPIO::LOW);
-	leftMotorInput1.SetPinValue(IMGPIO::LOW);
-	leftMotorInput2.SetPinValue(IMGPIO::LOW);
+	right_motor_in1.set_value(GpioPin::LOW);
+	right_motor_in2.set_value(GpioPin::LOW);
+	left_motor_in1.set_value(GpioPin::LOW);
+	left_motor_in2.set_value(GpioPin::LOW);
 
 	while (1)
 	{
@@ -154,19 +154,19 @@ int main()
 
         if (yAxis < -100) // forward
         {
-			leftMotorInput1.SetPinValue(IMGPIO::HIGH);
-			leftMotorInput2.SetPinValue(IMGPIO::LOW);
-			rightMotorInput1.SetPinValue(IMGPIO::LOW);
-			rightMotorInput2.SetPinValue(IMGPIO::HIGH);
+			left_motor_in1.set_value(GpioPin::HIGH);
+			left_motor_in2.set_value(GpioPin::LOW);
+			right_motor_in1.set_value(GpioPin::LOW);
+			right_motor_in2.set_value(GpioPin::HIGH);
             motorSpeedLeft = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
             motorSpeedRight = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
         }
         else if (yAxis > 100) // reverse
         {
-			leftMotorInput1.SetPinValue(IMGPIO::LOW);
-			leftMotorInput2.SetPinValue(IMGPIO::HIGH);
-			rightMotorInput1.SetPinValue(IMGPIO::HIGH);
-			rightMotorInput2.SetPinValue(IMGPIO::LOW);
+			left_motor_in1.set_value(GpioPin::LOW);
+			left_motor_in2.set_value(GpioPin::HIGH);
+			right_motor_in1.set_value(GpioPin::HIGH);
+			right_motor_in2.set_value(GpioPin::LOW);
             motorSpeedLeft = map(yAxis, 100, 32767, 0, 255);
             motorSpeedRight = map(yAxis, 100, 32767, 0, 255);
         }
@@ -174,10 +174,10 @@ int main()
         {
             motorSpeedLeft = 0;
             motorSpeedRight = 0;
-			rightMotorInput1.SetPinValue(IMGPIO::LOW);
-			rightMotorInput2.SetPinValue(IMGPIO::LOW);
-			leftMotorInput1.SetPinValue(IMGPIO::LOW);
-			leftMotorInput2.SetPinValue(IMGPIO::LOW);
+			right_motor_in1.set_value(GpioPin::LOW);
+			right_motor_in2.set_value(GpioPin::LOW);
+			left_motor_in1.set_value(GpioPin::LOW);
+			left_motor_in2.set_value(GpioPin::LOW);
         }
 
         if (xAxis < -100) // left 
