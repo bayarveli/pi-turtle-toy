@@ -30,8 +30,8 @@
  */
 #endif
 
-#ifndef INCLUDE_IMGPIO_H_
-#define INCLUDE_IMGPIO_H_
+#ifndef HAL_GPIO_PIN_H_
+#define HAL_GPIO_PIN_H_
 
 
 #include <string>
@@ -57,7 +57,7 @@ using namespace std;
 typedef void(*CallbackFunctionPtr)(void*, int);
 void CatchSignal(int i_sig);
 
-class IMGPIO
+class GpioPin
 {
 public:
 	#ifdef English_dox
@@ -73,7 +73,7 @@ public:
 	 *
 	 */
 	#endif
-	IMGPIO();
+	GpioPin();
 
 	#ifdef English_dox
 	//! Constructor
@@ -88,9 +88,9 @@ public:
 	 * \param str_pin_number
 	 */
 	#endif
-	IMGPIO(string str_pin_number);
+	GpioPin(string str_pin_number);
 
-	~IMGPIO();
+	~GpioPin();
 
 	#ifdef English_dox
 	//! Sets pin direction
@@ -248,4 +248,4 @@ private:
 
 };
 
-#endif /* INCLUDE_IMGPIO_H_ */
+#endif /* HAL_GPIO_PIN_H_ */

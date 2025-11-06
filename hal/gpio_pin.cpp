@@ -1,5 +1,5 @@
 /*
- * IMGPIO.cpp
+ * GpioPin.cpp
  *
  *  Created on: Mar 18, 2015
  *      Author: makcakoca
@@ -9,40 +9,40 @@
   A more elaborate class description.
 */
 
-#include "gpioLib.h"
+#include "gpio_pin.h"
 
 using namespace std;
 
 bool g_b_exit_signal = false;
 
 
-const string IMGPIO::RISING = "rising";
-const string IMGPIO::FALLING = "falling";
-const string IMGPIO::BOTH = "both";
+const string GpioPin::RISING = "rising";
+const string GpioPin::FALLING = "falling";
+const string GpioPin::BOTH = "both";
 
-const string IMGPIO::INPUT = "in";
-const string IMGPIO::OUTPUT = "out";
+const string GpioPin::INPUT = "in";
+const string GpioPin::OUTPUT = "out";
 
-const string IMGPIO::HIGH = "1";
-const string IMGPIO::LOW = "0";
+const string GpioPin::HIGH = "1";
+const string GpioPin::LOW = "0";
 
-const string IMGPIO::GPIO0 = "23";
-const string IMGPIO::GPIO1 = "24";
-const string IMGPIO::GPIO2 = "25";
-const string IMGPIO::GPIO3 = "7";
-const string IMGPIO::GPIO4 = "1";
-const string IMGPIO::GPIO5 = "16";
-const string IMGPIO::GPIO6 = "20";
-const string IMGPIO::GPIO7 = "21";
-const string IMGPIO::GPIO8 = "26";
-const string IMGPIO::GPIO9 = "6";
-const string IMGPIO::GPIO10 = "5";
-const string IMGPIO::GPIO11 = "0";
-const string IMGPIO::GPIO12 = "12";
-const string IMGPIO::GPIO13 = "19";
+const string GpioPin::GPIO0 = "23";
+const string GpioPin::GPIO1 = "24";
+const string GpioPin::GPIO2 = "25";
+const string GpioPin::GPIO3 = "7";
+const string GpioPin::GPIO4 = "1";
+const string GpioPin::GPIO5 = "16";
+const string GpioPin::GPIO6 = "20";
+const string GpioPin::GPIO7 = "21";
+const string GpioPin::GPIO8 = "26";
+const string GpioPin::GPIO9 = "6";
+const string GpioPin::GPIO10 = "5";
+const string GpioPin::GPIO11 = "0";
+const string GpioPin::GPIO12 = "12";
+const string GpioPin::GPIO13 = "19";
 
 
-IMGPIO::IMGPIO():i_value_fd(-1),i_direction_fd(-1),i_export_fd(-1),
+GpioPin::GpioPin():i_value_fd(-1),i_direction_fd(-1),i_export_fd(-1),
 i_unexport_fd(-1),i_edge_fd(-1),str_pin_number("23")
 {
 //	b_exit_signal = false;
@@ -54,7 +54,7 @@ i_unexport_fd(-1),i_edge_fd(-1),str_pin_number("23")
 /*!
 	\param _str_pin_number GPIO pin numarasi.
 */
-IMGPIO::IMGPIO(string _str_pin_number):i_value_fd(-1),
+GpioPin::GpioPin(string _str_pin_number):i_value_fd(-1),
 i_direction_fd(-1),i_export_fd(-1),i_unexport_fd(-1),i_edge_fd(-1),
 str_pin_number(_str_pin_number)
 {
@@ -65,7 +65,7 @@ str_pin_number(_str_pin_number)
 }
 
 
-IMGPIO::~IMGPIO()
+GpioPin::~GpioPin()
 {
 	printf("gpio kapatiliyor.\n");
 	this->UnexportGpio();
@@ -75,7 +75,7 @@ IMGPIO::~IMGPIO()
 	\return Fonksiyon durum bilgisi donmektedir.
 	Negatif donusler islem sirasinda hata gerlestigini gostermektedir.
 */
-int IMGPIO::ExportGpio()
+int GpioPin::ExportGpio()
 {
 	int i_status_value = -1;
 	string str_export = "/sys/class/gpio/export";
@@ -85,7 +85,7 @@ int IMGPIO::ExportGpio()
 	// HATA01
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO export aygiti acilamadi.");
+		perror("GpioPin: SYSFS GPIO export aygiti acilamadi.");
         exit(1);
 	}
 
@@ -101,7 +101,7 @@ int IMGPIO::ExportGpio()
 			close(this->i_export_fd);
 			return 0; // success
 		}
-		perror("IMGPIO: SYSFS GPIO export aygitina yazarken hata olustu.");
+		perror("GpioPin: SYSFS GPIO export aygitina yazarken hata olustu.");
         	exit(1);
 	}
 
@@ -109,7 +109,7 @@ int IMGPIO::ExportGpio()
 	// HATA03
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO export aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO export aygiti kapatilamadi.");
         exit(1);
 	}
 
@@ -120,7 +120,7 @@ int IMGPIO::ExportGpio()
 	\return Fonksiyon durum bilgisi donmektedir.
 	Negatif donusler islem sirasinda hata gerlestigini gostermektedir.
 */
-int IMGPIO::UnexportGpio()
+int GpioPin::UnexportGpio()
 {
 	int i_status_value = -1;
 	string str_unexport = "/sys/class/gpio/unexport";
@@ -131,7 +131,7 @@ int IMGPIO::UnexportGpio()
 	// HATA04
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO unexport aygiti acilamadi");
+		perror("GpioPin: SYSFS GPIO unexport aygiti acilamadi");
         exit(1);
 	}
 
@@ -142,7 +142,7 @@ int IMGPIO::UnexportGpio()
 	// HATA05
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO unexport aygitina yazarken hata oluştu.");
+		perror("GpioPin: SYSFS GPIO unexport aygitina yazarken hata oluştu.");
         exit(1);
 	}
 
@@ -150,7 +150,7 @@ int IMGPIO::UnexportGpio()
 	// HATA06
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO unexport aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO unexport aygiti kapatilamadi.");
         exit(1);
 	}
 
@@ -164,7 +164,7 @@ int IMGPIO::UnexportGpio()
 	\return Fonksiyon durum bilgisi donmektedir.
 	Negatif donusler islem sirasinda hata gerlestigini gostermektedir.
 */
-int IMGPIO::SetPinDirection(string str_direction)
+int GpioPin::SetPinDirection(string str_direction)
 {
 	int i_status_value = -1;
 	string str_setdir ="/sys/class/gpio/gpio" + this->str_pin_number + "/direction";
@@ -175,14 +175,14 @@ int IMGPIO::SetPinDirection(string str_direction)
 	// HATA07
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO direction aygiti acilamadi.");
+		perror("GpioPin: SYSFS GPIO direction aygiti acilamadi.");
 		exit(1);
 	}
 
 	// HATA08
 	if (str_direction.compare(INPUT) != 0 && str_direction.compare(OUTPUT) != 0 )
 	{
-		fprintf(stderr, "IMGPIO: Gecersiz Pin Modu Atamasi.\n INPUT ya da OUTPUT olmali.\n");
+		fprintf(stderr, "GpioPin: Gecersiz Pin Modu Atamasi.\n INPUT ya da OUTPUT olmali.\n");
 		exit(1);
 	}
 
@@ -191,7 +191,7 @@ int IMGPIO::SetPinDirection(string str_direction)
 	// HATA09
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO direction aygitina yazilamadi.");
+		perror("GpioPin: SYSFS GPIO direction aygitina yazilamadi.");
         exit(1);
 	}
 
@@ -199,7 +199,7 @@ int IMGPIO::SetPinDirection(string str_direction)
 	// HATA10
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO direction aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO direction aygiti kapatilamadi.");
         exit(1);
 	}
 
@@ -212,7 +212,7 @@ int IMGPIO::SetPinDirection(string str_direction)
 	\return Fonksiyon durum bilgisi donmektedir.
 	Negatif donusler islem sirasinda hata gerlestigini gostermektedir.
 */
-int IMGPIO::SetPinValue(string str_value)
+int GpioPin::SetPinValue(string str_value)
 {
 
     int i_status_value = -1;
@@ -223,14 +223,14 @@ int IMGPIO::SetPinValue(string str_value)
 	// HATA11
 	if (i_status_value < 0)
 	{
-			perror("IMGPIO: SYSFS GPIO value aygiti acilamadi.");
+			perror("GpioPin: SYSFS GPIO value aygiti acilamadi.");
         exit(1);
 	}
 
 	// HATA12
 	if (str_value.compare(HIGH) != 0 && str_value.compare(LOW) != 0 )
 	{
-		fprintf(stderr, "IMGPIO: Gecersiz deger girildi. HIGH ya da LOW olmali \n");
+		fprintf(stderr, "GpioPin: Gecersiz deger girildi. HIGH ya da LOW olmali \n");
 		exit(1);
 	}
 
@@ -239,7 +239,7 @@ int IMGPIO::SetPinValue(string str_value)
 	// HATA13
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO value aygitina yazilamadi.");
+		perror("GpioPin: SYSFS GPIO value aygitina yazilamadi.");
         exit(1);
 	}
 
@@ -247,7 +247,7 @@ int IMGPIO::SetPinValue(string str_value)
 	// HATA14
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO value aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO value aygiti kapatilamadi.");
         exit(1);
 	}
 	return i_status_value;
@@ -258,7 +258,7 @@ int IMGPIO::SetPinValue(string str_value)
 	\return Fonksiyon durum bilgisi donmektedir.
 	Negatif donusler islem sirasinda hata gerlestigini gostermektedir.
 */
-int IMGPIO::GetPinValue(string & str_value)
+int GpioPin::GetPinValue(string & str_value)
 {
 
 	string str_get_value = "/sys/class/gpio/gpio" + this->str_pin_number + "/value";
@@ -270,14 +270,14 @@ int IMGPIO::GetPinValue(string & str_value)
 	// HATA11
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO value aygiti acilamadi");
+		perror("GpioPin: SYSFS GPIO value aygiti acilamadi");
         exit(1);
 	}
 
 	i_status_value = read(this->i_value_fd, &c_buff, 1);
 	// HATA15
 	if (i_status_value < 0){
-		perror("IMGPIO: SYSFS GPIO value aygiti okunamadi");
+		perror("GpioPin: SYSFS GPIO value aygiti okunamadi");
         exit(1);
 	}
 
@@ -286,14 +286,14 @@ int IMGPIO::GetPinValue(string & str_value)
 	str_value = string(c_buff);
 
 	if (str_value.compare(HIGH) != 0 && str_value.compare(LOW) != 0 ) {
-		fprintf(stderr, "IMGPIO: Gecersiz deger okundu. HIGH ya da LOW olmali. \n");
+		fprintf(stderr, "GpioPin: Gecersiz deger okundu. HIGH ya da LOW olmali. \n");
 		exit(1);
 	}
 
 	i_status_value = close(this->i_value_fd);
 	// HATA14
 	if (i_status_value < 0){
-		perror("IMGPIO: SYSFS GPIO value aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO value aygiti kapatilamadi.");
         exit(1);
 	}
 
@@ -303,7 +303,7 @@ int IMGPIO::GetPinValue(string & str_value)
 /*!
 	\return Pin numarasi donmektedir.
 */
-string IMGPIO::GetPinNumber() const
+string GpioPin::GetPinNumber() const
 {
 	return this->str_pin_number;
 }
@@ -312,14 +312,14 @@ string IMGPIO::GetPinNumber() const
     \param _callback_function Callback fonksiyonu
 	\param void *p Callback fonksiyonunun bulundugu sınıfın nesnesini isaret etmektedir.
 */
-/*void IMGPIO::SetCallback(CallbackFunctionPtr _callback_function, void *p)
+/*void GpioPin::SetCallback(CallbackFunctionPtr _callback_function, void *p)
 {
 	callback_function = _callback_function;
 	p_v_callback_pointer = p;
 }*/
 
 
-/*int IMGPIO::SetInterruptMode(string str_int_mode)
+/*int GpioPin::SetInterruptMode(string str_int_mode)
 {
 
 	int i_status_value = -1;
@@ -329,7 +329,7 @@ string IMGPIO::GetPinNumber() const
 	if(str_int_mode.compare(RISING) != 0 && str_int_mode.compare(FALLING) != 0
 		&& str_int_mode.compare(BOTH) != 0)
 	{
-		fprintf(stderr, "IMGPIO: Gecersiz interrupt modu. RISING, FALLING ya da BOTH olmali\n");
+		fprintf(stderr, "GpioPin: Gecersiz interrupt modu. RISING, FALLING ya da BOTH olmali\n");
 		exit(1);
 	}
 
@@ -340,7 +340,7 @@ string IMGPIO::GetPinNumber() const
 	// HATA17
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO edge aygiti acilamadi.");
+		perror("GpioPin: SYSFS GPIO edge aygiti acilamadi.");
         exit(1);
 	}
 
@@ -349,7 +349,7 @@ string IMGPIO::GetPinNumber() const
 	// HATA18
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO edge aygitina yazilamadi.");
+		perror("GpioPin: SYSFS GPIO edge aygitina yazilamadi.");
         exit(1);
 	}
 
@@ -360,7 +360,7 @@ string IMGPIO::GetPinNumber() const
 	// HATA19
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO edge aygiti kapatilamadi.");
+		perror("GpioPin: SYSFS GPIO edge aygiti kapatilamadi.");
         exit(1);
 	}
 	return i_status_value;
@@ -368,7 +368,7 @@ string IMGPIO::GetPinNumber() const
 }
 */
 /*
-int IMGPIO::PollGpio()
+int GpioPin::PollGpio()
 {
 
 	string str_get_value = "/sys/class/gpio/gpio" + this->str_pin_number + "/value";
@@ -379,14 +379,14 @@ int IMGPIO::PollGpio()
 	// HATA11
 	if (i_status_value < 0)
 	{
-		perror("IMGPIO: SYSFS GPIO value aygiti acilamadi");
+		perror("GpioPin: SYSFS GPIO value aygiti acilamadi");
         exit(1);
 	}
 
 	if(str_interrupt_mode.compare(RISING) != 0 && str_interrupt_mode.compare(FALLING) != 0
 		&& str_interrupt_mode.compare(BOTH) != 0)
 	{
-		fprintf(stderr, "IMGPIO: Interrupt modu atanmamis.\n");
+		fprintf(stderr, "GpioPin: Interrupt modu atanmamis.\n");
 		exit(1);
 	}
 
