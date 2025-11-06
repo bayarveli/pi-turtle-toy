@@ -15,7 +15,7 @@
 #include <linux/joystick.h>
 #include <linux/input.h>
 
-#include "hal/gpioLib.h"
+#include "hal/gpio_pin.h"
 #include "hal/pwmLib.h"
 
 struct Joystick
