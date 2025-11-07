@@ -5,13 +5,22 @@
  *      Author: makcakoca
  */
 
+// Implementation relies on POSIX and C stdlib headers; keep them here (not in header).
 #include "pwm.h"
+#include "gpio_pin.h"
+#include <cstdio>
+#include <cstdlib>
+#include <climits>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 //Private constants
 const int PWM::BCM2708_PERI_BASE;
 const int PWM::PWM_BASE;/* PWM controller */
 const int PWM::CLOCK_BASE; /* Clock controller */
-const int PWM::GPIO_BASE; /* GPIO controller */
 
 const int PWM::PWM_CTL ;
 
@@ -35,58 +44,37 @@ const int PWM::ERRDUTY;
 const int PWM::ERRMODE;
 
 /***********************************************************************
- * rpiPWM::rpiPWM()
- * This is the Default constructor. First, it mmaps the registers in
- * Physical memory responsible for configuring GPIO, PWM and the PWM clock.
- * It then sets the frequency to 1KHz, PWM resolution to 256, duty
- * cycle to 50% & pwm mode to 'PWMMODE'
- * It then calls configPWMPin() to configure GPIO18 to ALT5 to allow it to
- * output PWM1 waveforms.
- * Finally  configPWM() is called to configure the PWM1 peripheral
+ * PWM constructor with default parameters.
+ * Accepts pre-configured GPIO pins. Caller must set pins to appropriate
+ * alternate function before constructing PWM.
  ***********************************************************************/
-PWM::PWM()
+PWM::PWM(GpioPin& channel0_pin, GpioPin& channel1_pin)
+  : channel0_pin_(&channel0_pin), channel1_pin_(&channel1_pin)
 {
-  this->p_v_u_clk = MapRegisterAddres(CLOCK_BASE);// map PWM clock registers into memory
-  this->p_v_u_pwm = MapRegisterAddres(PWM_BASE); //map PWM registers into memory
-  this->p_v_u_gpio = MapRegisterAddres(GPIO_BASE);// map GPIO registers into memory
-  this->d_frequency = 1000.0; // set frequency
-  this->u_i_counts = 256; //set PWM resolution
-  this->d_dutyCycle = 50.0; //set duty cycle
-  this->i_mode = PWMMODE; // set pwm mode
+  this->p_v_u_clk = map_register_address(CLOCK_BASE);
+  this->p_v_u_pwm = map_register_address(PWM_BASE);
+  this->d_frequency = 1000.0;
+  this->u_i_counts = 256;
+  this->d_dutyCycle = 50.0;
+  this->i_mode = PWMMODE;
 
-
-  ConfigPWMPin(); //configure GPIO18 to ALT15 (PWM output)
-  ConfigPWM();   // configure PWM1
-
+  config_pwm();
 }
 
 /***********************************************************************
- * rpiPWM::rpiPWM(double Hz, unsigned int cnts, double duty, unsigned int m)
- * This is the overloaded constructor. First, it mmaps the registers in
- * Physical memory responsible for configuring GPIO, PWM and the PWM clock.
- * It then sets the frequency, PWM resolution, duty cycle & pwm mode as
- * per the parameters provided.
- *
- * It then calls configPWMPin() to configure GPIO18 to ALT5 to allow it to
- * output PWM1 waveforms.
- * Finally  configPWM() is called to configure the PWM1 peripheral
- * Parameters: - Hz (double) - Frequency
- *             - cnts (unsigned int) - PWM resolution (counts)
- *             - duty (double) - Duty Cycle as a percentage
- *             - m     (int) - PWM mode (can be either 1 for PWMMODE (rpiPWM::PWMMODE)
- *               or 2 for MSMODE (rpiPWM::MSMODE)
+ * PWM constructor with custom parameters.
+ * Accepts pre-configured GPIO pins and PWM settings.
  ***********************************************************************/
-PWM::PWM(double d_Hz, unsigned int u_i_counts, double d_duty,  int i_m)
+PWM::PWM(GpioPin& channel0_pin, GpioPin& channel1_pin,
+         double d_Hz, unsigned int u_i_counts, double d_duty, int i_m)
+  : channel0_pin_(&channel0_pin), channel1_pin_(&channel1_pin)
 {
+  this->p_v_u_clk = map_register_address(CLOCK_BASE);
+  this->p_v_u_pwm = map_register_address(PWM_BASE);
 
-  this->p_v_u_clk = MapRegisterAddres(CLOCK_BASE);
-  this->p_v_u_gpio = MapRegisterAddres(GPIO_BASE);
-  this->p_v_u_pwm = MapRegisterAddres(PWM_BASE);
-
-
-   if( (u_i_counts < 0) || (u_i_counts > UINT_MAX) ) {
-   printf("counts value must be between 0-%d\n",UINT_MAX);
-   exit(1);
+  if( (u_i_counts < 0) || (u_i_counts > UINT_MAX) ) {
+    printf("counts value must be between 0-%d\n",UINT_MAX);
+    exit(1);
   }
 
   if ((d_Hz < 1e-5) || (d_Hz > 19200000.0f)){
@@ -108,10 +96,9 @@ PWM::PWM(double d_Hz, unsigned int u_i_counts, double d_duty,  int i_m)
   this->u_i_counts = u_i_counts;
   this->d_dutyCycle = d_duty;
   this->i_mode = i_m;
-  ConfigPWMPin();
-  ConfigPWM();
-  SetDutyCycleCount(0, 0);
-  SetDutyCycleCount(0, 1);
+  config_pwm();
+  set_duty_cycle_count(0, 0);
+  set_duty_cycle_count(0, 1);
 }
 
 /***********************************************************************
@@ -154,16 +141,6 @@ PWM::~PWM()
 		perror("munmap (clk) failed");
 		exit(1);
 	}
-
-   //lets put the GPIO peripheral registers in their original state
-   //first put it in input mode (default)
-   //taken from #define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-   *(p_v_u_gpio+1) &= ~(7 << 24);
-   //then munmap
-    if(munmap((void*)p_v_u_gpio, BLOCK_SIZE) < 0){
-		perror("munmap (gpio) failed");
-		exit(1);
-	}
 }
 
 
@@ -176,7 +153,7 @@ PWM::~PWM()
  * Return Value: 0 if successful or rpiPWM::ERRFREQ if frequency
  *               parameter is invalid
  ***********************************************************************/
- unsigned int PWM::SetFrequency(const double & c_d_hz)
+ unsigned int PWM::set_frequency(const double& c_d_hz)
  {
 	 unsigned int u_i_return_value = 0;
 	if (c_d_hz < 1e-5 || c_d_hz > 19200000.0f)
@@ -186,7 +163,7 @@ PWM::~PWM()
 	else
 	{
 		this->d_frequency = c_d_hz;
-		ConfigPWM();
+	config_pwm();
 	}
 
 	return u_i_return_value; // return 0 for success.....
@@ -201,7 +178,7 @@ PWM::~PWM()
  * Parameters: cnts (unsigned int) - counts
  * Return Value: 0 if successful or rpiPWM::ERRCOUNT if count value is invalid
  ***********************************************************************/
-unsigned int PWM::SetCounts(const unsigned int & c_u_i_counts)
+unsigned int PWM::set_counts(const unsigned int& c_u_i_counts)
 {
 	unsigned int u_i_return_value = 0;
 
@@ -212,7 +189,7 @@ unsigned int PWM::SetCounts(const unsigned int & c_u_i_counts)
 	else
 	{
 		this->u_i_counts = c_u_i_counts;
-		ConfigPWM();
+	config_pwm();
 	}
 
 	return u_i_return_value;
@@ -226,7 +203,7 @@ unsigned int PWM::SetCounts(const unsigned int & c_u_i_counts)
  * Parameters: duty (double) - Duty Cycle in %
  * Return Value: 0 if successful or rpiPWM::ERRDUTY if Duty cycle is invalid
  ****************************************************************************/
-unsigned int PWM::SetDutyCycle(const double &c_d_duty, int i_pwm_no)
+unsigned int PWM::set_duty_cycle(const double& c_d_duty, int i_pwm_no)
 {
 	unsigned int u_i_bit_count = 0;
 	unsigned int u_i_return_value = 0;
@@ -259,7 +236,7 @@ unsigned int PWM::SetDutyCycle(const double &c_d_duty, int i_pwm_no)
  *             m (int) - pwm mode (rpiPWM::PWMMODE or rpiPWM::MSMODE)
  * Return Value: 0 if successful or rpiPWM::ERRDUTY if Duty cycle is invalid
  *******************************************************************************/
-unsigned int PWM::SetDutyCycleForce(const double &c_d_duty, const  int &c_i_m, int i_pwm_no)
+unsigned int PWM::set_duty_cycle_force(const double& c_d_duty, const int& c_i_m, int i_pwm_no)
 {
 	unsigned int u_i_return_value = 0;
 
@@ -317,7 +294,7 @@ unsigned int PWM::SetDutyCycleForce(const double &c_d_duty, const  int &c_i_m, i
  * Parameters: dutyCycleCnts (unsigned int) - Duty Cycle in counts
  * Return Value:0 if successful or rpiPWM::ERRDUTY if Duty cycle is invalid
  ***********************************************************************/
-unsigned int PWM::SetDutyCycleCount(const unsigned int &c_u_i_counts, int i_pwm_no)
+unsigned int PWM::set_duty_cycle_count(const unsigned int& c_u_i_counts, int i_pwm_no)
 {
 	unsigned int u_i_return_value = 0;
 
@@ -344,7 +321,7 @@ unsigned int PWM::SetDutyCycleCount(const unsigned int &c_u_i_counts, int i_pwm_
  * Parameters: m (int) - pwm mode (rpiPWM::PWMMODE or rpiPWM::MSMODE)
  * Return Value: 0 if successful or rpiPWM::ERRMODE if MODE is invalid
  ********************************************************************************/
-unsigned int PWM::SetMode(const  int &c_i_m)
+unsigned int PWM::set_mode(const int& c_i_m)
 {
 	unsigned int u_i_return_value = 0;
 
@@ -355,8 +332,8 @@ unsigned int PWM::SetMode(const  int &c_i_m)
 	else
 	{
 		this->i_mode = c_i_m;
-		SetDutyCycleForce(this->d_dutyCycle, this->i_mode, 0);
-		SetDutyCycleForce(this->d_dutyCycle, this->i_mode, 1);
+	set_duty_cycle_force(this->d_dutyCycle, this->i_mode, 0);
+	set_duty_cycle_force(this->d_dutyCycle, this->i_mode, 1);
 	 }
 
 	return u_i_return_value;
@@ -368,15 +345,15 @@ unsigned int PWM::SetMode(const  int &c_i_m)
  * to access the PWM frequency, resolution, duty cycle and mode as well
  * as the PWM clock divisor value.
  *********************************************************************/
- double PWM::GetFrequency() const { return this->d_frequency;}
+ double PWM::frequency() const { return this->d_frequency;}
 
- int PWM::GetCounts() const { return this->u_i_counts;}
+ int PWM::counts() const { return this->u_i_counts;}
 
- int PWM::GetDivisor() const {return this->u_i_divisor;}
+ int PWM::divisor() const {return this->u_i_divisor;}
 
- double PWM::GetDutyCycle() const {return this->d_dutyCycle;}
+ double PWM::duty_cycle() const {return this->d_dutyCycle;}
 
- int PWM::GetMode() const{return this->i_mode;}
+ int PWM::mode() const { return this->i_mode; }
 
 /***********************************************************************
  *	volatile unsigned *rpiPWM::mapRegAddr(unsigned long baseAddr)
@@ -389,7 +366,7 @@ unsigned int PWM::SetMode(const  int &c_i_m)
  *             space process memory.
  * Return Value - mapped pointer in process memory
  ***********************************************************************/
-volatile unsigned *PWM::MapRegisterAddres(unsigned long u_l_base_address)
+volatile unsigned* PWM::map_register_address(unsigned long u_l_base_address)
 {
 	int i_mem_fd = 0;
 	void *p_v_register_address_map = MAP_FAILED;
@@ -432,48 +409,6 @@ volatile unsigned *PWM::MapRegisterAddres(unsigned long u_l_base_address)
 
 
 /***********************************************************************
- * void rpiPWM::configPWMPin()
- * This function is responsible for putting GPIO18 in PWM mode by setting
- * its alternate function to ALT5. It firsts make the GPIO an input
- * (default state) and then switches to alternate function 5 (PWM mode)
- ***********************************************************************/
-void PWM::ConfigPWMPin()
-{
-
-//#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-//#define OUT_GPIO(g) *(gpio+((g)/10)) |=  (1<<(((g)%10)*3))
-//#define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
-
-//#define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
-//#define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
-
-//#define GET_GPIO(g) (*(gpio+13)&(1<<g)) // 0 if LOW, (1<<g) if HIGH
-
-//#define GPIO_PULL *(gpio+37) // Pull up/pull down
-//#define GPIO_PULLCLK0 *(gpio+38) // Pull up/pull down clock
-
-	// PWM0
-
-	// GPIO18 - ALT5 Config
-	*(this->p_v_u_gpio + 1) &= ~(7 << 24);
-	*(this->p_v_u_gpio + 1) |= (2 << 24);
-
-	*(this->p_v_u_gpio + 1) &= ~(7 << 6);
-	printf("GPIO18\n");
-
-	// GPIO13 - ALT0 Config
-	*(this->p_v_u_gpio+1) &= ~(7 << 9);
-	*(this->p_v_u_gpio+1) |= (4 << 9);
-
-	*(this->p_v_u_gpio+1) &= ~(7 << 27);
-	printf("GPIO13\n");
-
-}
-
-
-
-
-/***********************************************************************
  * void  rpiPWM::configPWM()
  * This function configures the PWM1 peripheral.
  * - It stops the PWM clock
@@ -484,7 +419,7 @@ void PWM::ConfigPWMPin()
  * - Writes the PWM resolution and Duty Cycle to the appropriate registers
  * - Enables the PWM peripheral in the requested mode
  * *********************************************************************/
-void  PWM::ConfigPWM()
+void PWM::config_pwm()
 {
 
   double d_period;
