@@ -16,7 +16,7 @@
 #include <linux/input.h>
 
 #include "hal/gpio_pin.h"
-#include "hal/pwmLib.h"
+#include "hal/pwm.h"
 
 struct Joystick
 {
@@ -205,8 +205,8 @@ int main()
             if (motorSpeedRight < 0) { motorSpeedRight = 0; }
         }
 
-		MotorPWM.SetDutyCycleCount(motorSpeedLeft,0); // increase Duty Cycle by 16 counts every two seconds
-		MotorPWM.SetDutyCycleCount(motorSpeedRight,1); // increase Duty Cycle by 16 counts every two seconds
+		MotorPWM.set_duty_cycle_count(motorSpeedLeft,0); // increase Duty Cycle by 16 counts every two seconds
+		MotorPWM.set_duty_cycle_count(motorSpeedRight,1); // increase Duty Cycle by 16 counts every two seconds
 
 		// printf("Left Speed: %d - Right Speed: %d \n", motorSpeedLeft, motorSpeedRight);
 
