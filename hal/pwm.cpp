@@ -5,7 +5,7 @@
  *      Author: makcakoca
  */
 
-#include "pwmLib.h"
+#include "pwm.h"
 
 //Private constants
 const int PWM::BCM2708_PERI_BASE;

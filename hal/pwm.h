@@ -5,8 +5,8 @@
  *      Author: veli
  */
 
-#ifndef PWM_H_
-#define PWM_H_
+#ifndef HAL_PWM_H_
+#define HAL_PWM_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,4 +93,4 @@ class PWM
 	//of our process memory
 };
 
-#endif /* PWM_H_ */
+#endif /* HAL_PWM_H_ */
