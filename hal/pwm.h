@@ -3,13 +3,13 @@
 #ifndef HAL_PWM_H_
 #define HAL_PWM_H_
 
-class GpioPin;  // Forward declaration
+class MemoryMappedPin;  // Forward declaration
 
 class PWM {
  public:
-  // Constructors accepting pre-configured GPIO pins for PWM channels
-  PWM(GpioPin& channel0_pin, GpioPin& channel1_pin);
-  PWM(GpioPin& channel0_pin, GpioPin& channel1_pin, 
+  // Constructors accepting pre-configured MemoryMappedPin for PWM channels
+  PWM(MemoryMappedPin& channel0_pin, MemoryMappedPin& channel1_pin);
+  PWM(MemoryMappedPin& channel0_pin, MemoryMappedPin& channel1_pin, 
       double d_Hz, unsigned int u_i_counts, double d_duty, int i_m);
   ~PWM();
 
@@ -60,8 +60,8 @@ class PWM {
   volatile unsigned* map_register_address(unsigned long base_address);
   void config_pwm();
 
-  GpioPin* channel0_pin_;  // Injected GPIO pins for PWM channels
-  GpioPin* channel1_pin_;
+  MemoryMappedPin* channel0_pin_;  // Injected pins for PWM channels
+  MemoryMappedPin* channel1_pin_;
   double d_frequency;          // PWM frequency
   double d_dutyCycle;          // PWM duty Cycle (%)
   unsigned int u_i_counts;     // PWM resolution

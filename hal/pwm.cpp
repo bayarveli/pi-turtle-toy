@@ -7,7 +7,7 @@
 
 // Implementation relies on POSIX and C stdlib headers; keep them here (not in header).
 #include "pwm.h"
-#include "gpio_pin.h"
+#include "memory_mapped_pin.h"
 #include <cstdio>
 #include <cstdlib>
 #include <climits>
@@ -45,10 +45,10 @@ const int PWM::ERRMODE;
 
 /***********************************************************************
  * PWM constructor with default parameters.
- * Accepts pre-configured GPIO pins. Caller must set pins to appropriate
- * alternate function before constructing PWM.
+ * Accepts pre-configured MemoryMappedPin objects. Caller must set pins
+ * to appropriate alternate function before constructing PWM.
  ***********************************************************************/
-PWM::PWM(GpioPin& channel0_pin, GpioPin& channel1_pin)
+PWM::PWM(MemoryMappedPin& channel0_pin, MemoryMappedPin& channel1_pin)
   : channel0_pin_(&channel0_pin), channel1_pin_(&channel1_pin)
 {
   this->p_v_u_clk = map_register_address(CLOCK_BASE);
@@ -63,10 +63,10 @@ PWM::PWM(GpioPin& channel0_pin, GpioPin& channel1_pin)
 
 /***********************************************************************
  * PWM constructor with custom parameters.
- * Accepts pre-configured GPIO pins and PWM settings.
+ * Accepts pre-configured MemoryMappedPin objects and PWM settings.
  ***********************************************************************/
-PWM::PWM(GpioPin& channel0_pin, GpioPin& channel1_pin,
-         double d_Hz, unsigned int u_i_counts, double d_duty, int i_m)
+PWM::PWM(MemoryMappedPin& channel0_pin, MemoryMappedPin& channel1_pin, 
+	double d_Hz, unsigned int u_i_counts, double d_duty, int i_m)
   : channel0_pin_(&channel0_pin), channel1_pin_(&channel1_pin)
 {
   this->p_v_u_clk = map_register_address(CLOCK_BASE);

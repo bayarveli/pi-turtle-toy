@@ -16,6 +16,7 @@
 #include <linux/input.h>
 
 #include "hal/gpio_pin.h"
+#include "hal/memory_mapped_pin.h"
 #include "hal/pwm.h"
 
 struct Joystick
@@ -118,11 +119,11 @@ int main()
 	/*PWM */
 	/* Raspberry Pin 12 -> ENA (Gray Cable) */
 	/* Raspberry Pin 33 -> ENB (Purple Cable) */
-	// Configure GPIO pins for PWM channels before creating PWM instance
-	GpioPin pwm_channel0("18");  // GPIO18 -> PWM0 (Pin 12)
+	// Configure pins for PWM using MemoryMappedPin (not GpioPin - they conflict!)
+	MemoryMappedPin pwm_channel0("18");  // GPIO18 -> PWM0 (Pin 12)
 	pwm_channel0.set_alt_function(AltFunction::Alt5);
 	
-	GpioPin pwm_channel1("13");  // GPIO13 -> PWM1 (Pin 33)
+	MemoryMappedPin pwm_channel1("13");  // GPIO13 -> PWM1 (Pin 33)
 	pwm_channel1.set_alt_function(AltFunction::Alt0);
 	
 	PWM MotorPWM(pwm_channel0, pwm_channel1, 1000.0, 256, 80.0, PWM::MSMODE);

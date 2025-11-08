@@ -6,18 +6,6 @@
 
 #include <string>
 
-// GPIO alternate functions for special peripheral modes (PWM, SPI, I2C, etc.)
-enum class AltFunction {
-  Input = 0,
-  Output = 1,
-  Alt0 = 4,
-  Alt1 = 5,
-  Alt2 = 6,
-  Alt3 = 7,
-  Alt4 = 3,
-  Alt5 = 2
-};
-
 class GpioPin {
  public:
   static inline const std::string OUTPUT = "out";
@@ -54,9 +42,6 @@ class GpioPin {
 
   // Set GPIO pin direction (INPUT or OUTPUT)
   void set_direction(const std::string& direction);
-
-  // Set GPIO pin alternate function for peripheral use (PWM, SPI, etc.)
-  void set_alt_function(AltFunction function);
 
   // Set GPIO pin value (HIGH or LOW)
   void set_value(const std::string& value);
