@@ -5,6 +5,7 @@
 //     std::cout << "Hello, from JoyBot!\n";
 // }
 
+#include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/types.h>
@@ -17,6 +18,7 @@
 
 #include "hal/gpio_pin.h"
 #include "hal/memory_mapped_pin.h"
+#include "motor.h"
 #include "hal/pwm.h"
 
 struct Joystick
@@ -97,41 +99,28 @@ int main()
 		joysticks[i] = openJoystick(fileName);
 	}
 
-	/*
-	 * Raspberry Pin 16 -> IN1 (Red Cable)
-	 * Raspberry Pin 18 -> IN2 (Green Cable)
-	 * */
-	GpioPin right_motor_in1("535");
-	GpioPin right_motor_in2("536");
-
-	/*
-	 * Raspberry Pin 29 -> IN3 (Blue Cable)
-	 * Raspberry Pin 31 -> IN4 (Orange Cable)
-	 * */
-	GpioPin left_motor_in1("517");
-	GpioPin left_motor_in2("518");
-	/*Set direction pins as output*/
-	right_motor_in1.set_direction(GpioPin::OUTPUT);
-	right_motor_in2.set_direction(GpioPin::OUTPUT);
-	left_motor_in1.set_direction(GpioPin::OUTPUT);
-	left_motor_in2.set_direction(GpioPin::OUTPUT);
-
-	/*PWM */
 	/* Raspberry Pin 12 -> ENA (Gray Cable) */
 	/* Raspberry Pin 33 -> ENB (Purple Cable) */
-	// Configure pins for PWM using MemoryMappedPin (not GpioPin - they conflict!)
 	MemoryMappedPin pwm_channel0("18");  // GPIO18 -> PWM0 (Pin 12)
 	pwm_channel0.set_alt_function(AltFunction::Alt5);
-	
 	MemoryMappedPin pwm_channel1("13");  // GPIO13 -> PWM1 (Pin 33)
 	pwm_channel1.set_alt_function(AltFunction::Alt0);
-	
-	PWM MotorPWM(pwm_channel0, pwm_channel1, 1000.0, 256, 80.0, PWM::MSMODE);
+	PWM motor_pwm(pwm_channel0, pwm_channel1, 1000.0, 256, 80.0, PWM::MSMODE);
 
-	right_motor_in1.set_value(GpioPin::LOW);
-	right_motor_in2.set_value(GpioPin::LOW);
-	left_motor_in1.set_value(GpioPin::LOW);
-	left_motor_in2.set_value(GpioPin::LOW);
+	GpioPin right_motor_in1("535"); // Raspberry Pin 16 -> IN1 (Red Cable)
+	GpioPin right_motor_in2("536"); // Raspberry Pin 18 -> IN2 (Green Cable)
+	right_motor_in1.set_direction(GpioPin::OUTPUT);
+	right_motor_in2.set_direction(GpioPin::OUTPUT);
+	Motor right_motor(right_motor_in1, right_motor_in2, motor_pwm, 1);
+
+	GpioPin left_motor_in1("517"); // Raspberry Pin 29 -> IN3 (Blue Cable)
+	GpioPin left_motor_in2("518"); // Raspberry Pin 31 -> IN4 (Orange Cable)
+	left_motor_in1.set_direction(GpioPin::OUTPUT);
+	left_motor_in2.set_direction(GpioPin::OUTPUT);
+	Motor left_motor(left_motor_in1, left_motor_in2, motor_pwm, 0);
+
+	left_motor.stop();
+	right_motor.stop();
 
 	while (1)
 	{
@@ -157,59 +146,46 @@ int main()
         /* Drive */
         auto xAxis = joysticks[JOYSTICK_ID].axisStates[0];
         auto yAxis = joysticks[JOYSTICK_ID].axisStates[1];
-        auto motorSpeedLeft{ 0 };
-        auto motorSpeedRight{ 0 };
+        int motor_speed_left = 0;
+        int motor_speed_right = 0;
 
+        // Calculate base speed from Y axis
         if (yAxis < -100) // forward
         {
-			left_motor_in1.set_value(GpioPin::HIGH);
-			left_motor_in2.set_value(GpioPin::LOW);
-			right_motor_in1.set_value(GpioPin::LOW);
-			right_motor_in2.set_value(GpioPin::HIGH);
-            motorSpeedLeft = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
-            motorSpeedRight = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
+            motor_speed_left = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
+            motor_speed_right = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
         }
         else if (yAxis > 100) // reverse
         {
-			left_motor_in1.set_value(GpioPin::LOW);
-			left_motor_in2.set_value(GpioPin::HIGH);
-			right_motor_in1.set_value(GpioPin::HIGH);
-			right_motor_in2.set_value(GpioPin::LOW);
-            motorSpeedLeft = map(yAxis, 100, 32767, 0, 255);
-            motorSpeedRight = map(yAxis, 100, 32767, 0, 255);
+            motor_speed_left = -map(yAxis, 100, 32767, 0, 255);
+            motor_speed_right = -map(yAxis, 100, 32767, 0, 255);
         }
-        else
+
+        // Apply turning adjustments from X axis
+        if (xAxis < -100) // left turn
         {
-            motorSpeedLeft = 0;
-            motorSpeedRight = 0;
-			right_motor_in1.set_value(GpioPin::LOW);
-			right_motor_in2.set_value(GpioPin::LOW);
-			left_motor_in1.set_value(GpioPin::LOW);
-			left_motor_in2.set_value(GpioPin::LOW);
+            int xMapped = map(std::abs(xAxis), std::abs(-100), std::abs(-32767), 0, 255);
+            motor_speed_left -= xMapped;
+            motor_speed_right += xMapped;
         }
-
-        if (xAxis < -100) // left 
+        else if (xAxis > 100) // right turn
         {
-            auto xMapped = map(std::abs(xAxis), std::abs(-100), std::abs(-32767), 0, 255);
-            motorSpeedLeft = motorSpeedLeft - xMapped;
-            motorSpeedRight = motorSpeedRight + xMapped;
-            if (motorSpeedLeft < 0) { motorSpeedLeft = 0; }
-            if (motorSpeedRight > 255) { motorSpeedRight = 255; }
+            int xMapped = map(xAxis, 100, 32767, 0, 255);
+            motor_speed_left += xMapped;
+            motor_speed_right -= xMapped;
         }
 
-        if (xAxis > 100) // Right
-        {
-            auto xMapped = map(xAxis, 100, 32767, 0, 255);
-            motorSpeedLeft = motorSpeedLeft + xMapped;
-            motorSpeedRight = motorSpeedRight - xMapped;
-            if (motorSpeedLeft > 255) { motorSpeedLeft = 255; }
-            if (motorSpeedRight < 0) { motorSpeedRight = 0; }
-        }
+        // Clamp speeds to valid range
+        if (motor_speed_left > 255) motor_speed_left = 255;
+        if (motor_speed_left < -255) motor_speed_left = -255;
+        if (motor_speed_right > 255) motor_speed_right = 255;
+        if (motor_speed_right < -255) motor_speed_right = -255;
 
-		MotorPWM.set_duty_cycle_count(motorSpeedLeft,0); // increase Duty Cycle by 16 counts every two seconds
-		MotorPWM.set_duty_cycle_count(motorSpeedRight,1); // increase Duty Cycle by 16 counts every two seconds
+        // Apply to motors (right motor inverted for correct wiring)
+        left_motor.set_speed(motor_speed_left);
+        right_motor.set_speed(motor_speed_right);  // Inverted polarity
 
-		// printf("Left Speed: %d - Right Speed: %d \n", motorSpeedLeft, motorSpeedRight);
+		std::cout << "Left Speed: " << motor_speed_left << " - Right Speed: " << motor_speed_right << "\n";
 
 		fflush(stdout);
 		usleep(16000);

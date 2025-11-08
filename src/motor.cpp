@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "hal/gpio_pin.h"
-#include "hal/pwm.h"
+#include "../hal/gpio_pin.h"
+#include "../hal/pwm.h"
 
 Motor::Motor(GpioPin& pin_in1, GpioPin& pin_in2, PWM& pwm_ref, int pwm_channel)
   : in1(&pin_in1), in2(&pin_in2), pwm(&pwm_ref), channel(pwm_channel) {
