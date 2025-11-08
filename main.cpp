@@ -16,7 +16,8 @@
 #include <linux/input.h>
 
 #include "hal/gpio_pin.h"
-#include "hal/pwmLib.h"
+#include "hal/memory_mapped_pin.h"
+#include "hal/pwm.h"
 
 struct Joystick
 {
@@ -118,7 +119,14 @@ int main()
 	/*PWM */
 	/* Raspberry Pin 12 -> ENA (Gray Cable) */
 	/* Raspberry Pin 33 -> ENB (Purple Cable) */
-	PWM MotorPWM(1000.0,256,80.0,PWM::MSMODE);
+	// Configure pins for PWM using MemoryMappedPin (not GpioPin - they conflict!)
+	MemoryMappedPin pwm_channel0("18");  // GPIO18 -> PWM0 (Pin 12)
+	pwm_channel0.set_alt_function(AltFunction::Alt5);
+	
+	MemoryMappedPin pwm_channel1("13");  // GPIO13 -> PWM1 (Pin 33)
+	pwm_channel1.set_alt_function(AltFunction::Alt0);
+	
+	PWM MotorPWM(pwm_channel0, pwm_channel1, 1000.0, 256, 80.0, PWM::MSMODE);
 
 	right_motor_in1.set_value(GpioPin::LOW);
 	right_motor_in2.set_value(GpioPin::LOW);
@@ -198,8 +206,8 @@ int main()
             if (motorSpeedRight < 0) { motorSpeedRight = 0; }
         }
 
-		MotorPWM.SetDutyCycleCount(motorSpeedLeft,0); // increase Duty Cycle by 16 counts every two seconds
-		MotorPWM.SetDutyCycleCount(motorSpeedRight,1); // increase Duty Cycle by 16 counts every two seconds
+		MotorPWM.set_duty_cycle_count(motorSpeedLeft,0); // increase Duty Cycle by 16 counts every two seconds
+		MotorPWM.set_duty_cycle_count(motorSpeedRight,1); // increase Duty Cycle by 16 counts every two seconds
 
 		// printf("Left Speed: %d - Right Speed: %d \n", motorSpeedLeft, motorSpeedRight);
 

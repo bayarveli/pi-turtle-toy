@@ -3,8 +3,9 @@ project(JoyBot VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(JoyBot 
     main.cpp
+    hal/memory_mapped_pin.cpp
     hal/gpio_pin.cpp
-    hal/pwmLib.cpp
+    hal/pwm.cpp
 )
 
 include(CTest)
