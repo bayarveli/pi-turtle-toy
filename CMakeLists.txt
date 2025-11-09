@@ -6,7 +6,10 @@ add_executable(JoyBot
     hal/memory_mapped_pin.cpp
     hal/gpio_pin.cpp
     hal/pwm.cpp
+    src/motor.cpp
 )
+
+target_include_directories(JoyBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 include(CTest)
 enable_testing()
