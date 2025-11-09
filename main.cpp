@@ -85,8 +85,6 @@ constexpr int AXIS2_MAX{ 32767 }; /* Left joystick - Horizontal Right */
 constexpr int AXIS3_MIN{ -32767 }; /* Left joystick - Vertical Up */
 constexpr int AXIS3_MAX{ 32767 }; /* Left joystick - Vertical Down */
 
-
-
 int main()
 {
 	const unsigned int maxJoysticks = 32;
@@ -99,22 +97,46 @@ int main()
 		joysticks[i] = openJoystick(fileName);
 	}
 
-	/* Raspberry Pin 12 -> ENA (Gray Cable) */
-	/* Raspberry Pin 33 -> ENB (Purple Cable) */
-	MemoryMappedPin pwm_channel0("18");  // GPIO18 -> PWM0 (Pin 12)
+	/* PWM pin mapping (RPi 2 Model B)
+	 * The Raspberry Pi PWM peripheral has two channels (PWM0, PWM1). Those
+	 * channels are used on the following pins using their required ALT modes:
+	 *   +----------+---------+-----------+-----------+
+	 *   | Function | Channel |  BCM GPIO | Phys Pin  |
+	 *   +----------+---------+-----------+-----------+
+	 *   |   PWM0   |   ch0   |   GPIO18  |    12     | (ALT5)
+	 *   |   PWM1   |   ch1   |   GPIO13  |    33     | (ALT0)
+	 *   +----------+---------+-----------+-----------+
+	 */
+	MemoryMappedPin pwm_channel0("18");
 	pwm_channel0.set_alt_function(AltFunction::Alt5);
-	MemoryMappedPin pwm_channel1("13");  // GPIO13 -> PWM1 (Pin 33)
+	MemoryMappedPin pwm_channel1("13");
 	pwm_channel1.set_alt_function(AltFunction::Alt0);
 	PWM motor_pwm(pwm_channel0, pwm_channel1, 1000.0, 256, 80.0, PWM::MSMODE);
 
-	GpioPin right_motor_in1("535"); // Raspberry Pin 16 -> IN1 (Red Cable)
-	GpioPin right_motor_in2("536"); // Raspberry Pin 18 -> IN2 (Green Cable)
+	/* Motor direction pins
+	 *
+	 * Right motor:
+	 *   +------+---------+-----------+-----------+----------+
+	 *   | Role |  Side   |  BCM GPIO | Phys Pin  | sysfs id |
+	 *   +------+---------+-----------+-----------+----------+
+	 *   | IN1  | right   |   GPIO23  |    16     |   535    |
+	 *   | IN2  | right   |   GPIO24  |    18     |   536    |
+	 *   +------+---------+-----------+-----------+----------+
+	 * Left motor:
+	 *   +------+---------+-----------+-----------+----------+
+	 *   | IN3  | left    |   GPIO5   |    29     |   517    |
+	 *   | IN4  | left    |   GPIO6   |    31     |   518    |
+	 *   +------+---------+-----------+-----------+----------+
+	 * Note: sysfs IDs on this system appear to be (base 512 + BCM).
+	 */
+	GpioPin right_motor_in1("535");
+	GpioPin right_motor_in2("536");
 	right_motor_in1.set_direction(GpioPin::OUTPUT);
 	right_motor_in2.set_direction(GpioPin::OUTPUT);
 	Motor right_motor(right_motor_in1, right_motor_in2, motor_pwm, 1);
 
-	GpioPin left_motor_in1("517"); // Raspberry Pin 29 -> IN3 (Blue Cable)
-	GpioPin left_motor_in2("518"); // Raspberry Pin 31 -> IN4 (Orange Cable)
+	GpioPin left_motor_in1("517");
+	GpioPin left_motor_in2("518");
 	left_motor_in1.set_direction(GpioPin::OUTPUT);
 	left_motor_in2.set_direction(GpioPin::OUTPUT);
 	Motor left_motor(left_motor_in1, left_motor_in2, motor_pwm, 0);
