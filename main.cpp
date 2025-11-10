@@ -20,17 +20,12 @@ long map(long x, long in_min, long in_max, long out_min, long out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-// Draw an ascii art to show the axis and numbers
-
-constexpr int AXIS0_MIN{ -32767 }; /* Left joystick - Horizontal Left */
-constexpr int AXIS0_MAX{ 32767 }; /* Left joystick - Horizontal Right */
-constexpr int AXIS1_MIN{ -32767 }; /* Left joystick - Vertical Up */
-constexpr int AXIS1_MAX{ 32767 }; /* Left joystick - Vertical Down */
-
-constexpr int AXIS2_MIN{ -32767 }; /* Left joystick - Horizontal Left */
-constexpr int AXIS2_MAX{ 32767 }; /* Left joystick - Horizontal Right */
-constexpr int AXIS3_MIN{ -32767 }; /* Left joystick - Vertical Up */
-constexpr int AXIS3_MAX{ 32767 }; /* Left joystick - Vertical Down */
+constexpr const char* JOYSTICK_DEVICE_PATH  = "/dev/input/js0";
+constexpr int JOYSTICK_AXIS_MIN = -32767;
+constexpr int JOYSTICK_AXIS_MAX = 32767;
+constexpr int DEADZONE_THRESHOLD = 100;
+constexpr int MOTOR_SPEED_MIN = 0;
+constexpr int MOTOR_SPEED_MAX = 255;
 
 int main()
 {
@@ -78,7 +73,7 @@ int main()
 	right_motor.stop();
 
 	Joystick usb_joystick;
-	usb_joystick.open("/dev/input/js0");
+	usb_joystick.open(JOYSTICK_DEVICE_PATH );
 
 	while (true)
 	{
@@ -87,7 +82,7 @@ int main()
 			std::cerr << "[WARN] Input device lost. Attempting reconnection..." << std::endl;
 			left_motor.stop();
 			right_motor.stop();
-			while (!usb_joystick.try_reconnect("/dev/input/js0")) {
+			while (!usb_joystick.try_reconnect(JOYSTICK_DEVICE_PATH)) {
 				std::cerr << "[INFO] Reconnect attempt failed. Retrying in 1s..." << std::endl;
 				usleep(1000000);
 			}
@@ -96,34 +91,37 @@ int main()
 		
 		usb_joystick.poll();
 
-		/* Drive */
-		auto xAxis = usb_joystick.axis_state(0);
-		auto yAxis = usb_joystick.axis_state(1);
+		auto steering_axis_value = usb_joystick.axis_state(0);
+		auto throttle_axis_value = usb_joystick.axis_state(1);
 		int motor_speed_left = 0;
 		int motor_speed_right = 0;
 
-		// Calculate base speed from Y axis
-		if (yAxis < -100) // forward
+		if (throttle_axis_value < -DEADZONE_THRESHOLD)
 		{
-			motor_speed_left = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
-			motor_speed_right = map(std::abs(yAxis), std::abs(-100), std::abs(-32767), 0, 255);
+			motor_speed_left = map(
+				std::abs(throttle_axis_value), std::abs(-DEADZONE_THRESHOLD), std::abs(JOYSTICK_AXIS_MIN), MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
+			motor_speed_right = map(
+				std::abs(throttle_axis_value), std::abs(-DEADZONE_THRESHOLD), std::abs(JOYSTICK_AXIS_MIN), MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
 		}
-		else if (yAxis > 100) // reverse
+		else if (throttle_axis_value > DEADZONE_THRESHOLD)
 		{
-			motor_speed_left = -map(yAxis, 100, 32767, 0, 255);
-			motor_speed_right = -map(yAxis, 100, 32767, 0, 255);
+			motor_speed_left = -map(
+				throttle_axis_value, DEADZONE_THRESHOLD, JOYSTICK_AXIS_MAX, MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
+			motor_speed_right = -map(
+				throttle_axis_value, DEADZONE_THRESHOLD, JOYSTICK_AXIS_MAX, MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
 		}
 
-		// Apply turning adjustments from X axis
-		if (xAxis < -100) // left turn
+		if (steering_axis_value < -DEADZONE_THRESHOLD)
 		{
-			int xMapped = map(std::abs(xAxis), std::abs(-100), std::abs(-32767), 0, 255);
+			int xMapped = map(
+				std::abs(steering_axis_value), std::abs(-DEADZONE_THRESHOLD), std::abs(JOYSTICK_AXIS_MIN), MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
 			motor_speed_left -= xMapped;
 			motor_speed_right += xMapped;
 		}
-		else if (xAxis > 100) // right turn
+		else if (steering_axis_value > DEADZONE_THRESHOLD)
 		{
-			int xMapped = map(xAxis, 100, 32767, 0, 255);
+			int xMapped = map(
+				steering_axis_value, DEADZONE_THRESHOLD, JOYSTICK_AXIS_MAX, MOTOR_SPEED_MIN, MOTOR_SPEED_MAX);
 			motor_speed_left += xMapped;
 			motor_speed_right -= xMapped;
 		}
@@ -131,9 +129,6 @@ int main()
 		left_motor.set_speed(motor_speed_left);
 		right_motor.set_speed(motor_speed_right);
 
-		std::cout << "[TRACE] Motor L=" << motor_speed_left << " R=" << motor_speed_right << std::endl;
-
-		fflush(stdout);
 		usleep(16000);
 	}
 }
