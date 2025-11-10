@@ -131,14 +131,10 @@ int main()
 	 */
 	GpioPin right_motor_in1("535");
 	GpioPin right_motor_in2("536");
-	right_motor_in1.set_direction(GpioPin::OUTPUT);
-	right_motor_in2.set_direction(GpioPin::OUTPUT);
 	Motor right_motor(right_motor_in1, right_motor_in2, motor_pwm, 1);
 
 	GpioPin left_motor_in1("517");
 	GpioPin left_motor_in2("518");
-	left_motor_in1.set_direction(GpioPin::OUTPUT);
-	left_motor_in2.set_direction(GpioPin::OUTPUT);
 	Motor left_motor(left_motor_in1, left_motor_in2, motor_pwm, 0);
 
 	left_motor.stop();
@@ -197,15 +193,8 @@ int main()
             motor_speed_right -= xMapped;
         }
 
-        // Clamp speeds to valid range
-        if (motor_speed_left > 255) motor_speed_left = 255;
-        if (motor_speed_left < -255) motor_speed_left = -255;
-        if (motor_speed_right > 255) motor_speed_right = 255;
-        if (motor_speed_right < -255) motor_speed_right = -255;
-
-        // Apply to motors (right motor inverted for correct wiring)
         left_motor.set_speed(motor_speed_left);
-        right_motor.set_speed(motor_speed_right);  // Inverted polarity
+        right_motor.set_speed(motor_speed_right);
 
 		std::cout << "Left Speed: " << motor_speed_left << " - Right Speed: " << motor_speed_right << "\n";
 
