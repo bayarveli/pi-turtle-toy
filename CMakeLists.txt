@@ -5,6 +5,7 @@ add_executable(JoyBot
     main.cpp
     hal/memory_mapped_pin.cpp
     hal/gpio_pin.cpp
+    hal/gpio_input_pin.cpp
     hal/pwm.cpp
     src/motor.cpp
     src/joystick.cpp
