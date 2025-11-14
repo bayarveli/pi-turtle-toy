@@ -9,6 +9,7 @@ add_executable(JoyBot
     hal/pwm.cpp
     src/motor.cpp
     src/joystick.cpp
+    src/encoder.cpp
 )
 
 target_include_directories(JoyBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
