@@ -8,12 +8,14 @@
 #include <iostream>
 #include <stdio.h>
 #include <unistd.h>
+#include <cstdint>
 
 #include "hal/gpio_pin.h"
 #include "hal/memory_mapped_pin.h"
 #include "motor.h"
 #include "hal/pwm.h"
 #include "joystick.h"
+#include "encoder.h"
 
 /* https://www.arduino.cc/reference/en/language/functions/math/map/ */
 long map(long x, long in_min, long in_max, long out_min, long out_max) {
@@ -69,11 +71,28 @@ int main()
 	GpioPin left_motor_in2("518");
 	Motor left_motor(left_motor_in1, left_motor_in2, motor_pwm, 0);
 
-	left_motor.stop();
-	right_motor.stop();
-
+    /* Wheel encoder pin mapping:
+     *   +-------------+-----------+-----------+----------+
+     *   |    Role     |  BCM GPIO | Phys Pin  | sysfs id |
+     *   +-------------+-----------+-----------+----------+
+     *   | Left Wheel  |   GPIO17  |    11     |   529    |
+     *   | Right Wheel |   GPIO27  |    13     |   539    |
+     *   +-------------+-----------+-----------+----------+
+     * Note: Use BCM GPIO numbers for the Encoder constructor
+     */
+    Encoder left_encoder("17", GpioInputPin::EDGE_RISING);
+    Encoder right_encoder("27", GpioInputPin::EDGE_RISING);
+	
 	Joystick usb_joystick;
 	usb_joystick.open(JOYSTICK_DEVICE_PATH );
+	
+	left_motor.stop();
+	right_motor.stop();
+    left_encoder.start();
+    right_encoder.start();
+
+	std::cout << "[INFO] Encoders started. Monitoring pulses...\n";
+	unsigned int loop_count = 0;
 
 	while (true)
 	{
@@ -128,6 +147,13 @@ int main()
 
 		left_motor.set_speed(motor_speed_left);
 		right_motor.set_speed(motor_speed_right);
+
+		// Print encoder counts every 60 loops (~1 second)
+		if (++loop_count % 60 == 0) {
+			std::uint32_t left_count = left_encoder.get_count();
+			std::uint32_t right_count = right_encoder.get_count();
+			std::cout << "[Encoder] Left: " << left_count << " | Right: " << right_count << "\n";
+		}
 
 		usleep(16000);
 	}
