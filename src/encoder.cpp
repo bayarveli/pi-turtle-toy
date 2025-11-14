@@ -9,8 +9,8 @@
 #include <stdexcept>
 #include <cstring>
 
-Encoder::Encoder(const std::string& gpio_pin, const std::string& edge_type)
-    : gpio_pin(std::make_unique<GpioInputPin>(gpio_pin)),
+Encoder::Encoder(const std::string& pin_number, const std::string& edge_type)
+    : gpio_pin(std::make_unique<GpioInputPin>(pin_number)),
       pulse_count(0),
       running(false),
       value_fd(-1)
@@ -21,7 +21,7 @@ Encoder::Encoder(const std::string& gpio_pin, const std::string& edge_type)
 Encoder::~Encoder()
 {
   stop();
-  
+
   if (value_fd >= 0) {
     close(value_fd);
   }
