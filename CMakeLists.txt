@@ -9,6 +9,7 @@ add_executable(JoyBot
     hal/pwm.cpp
     src/motor.cpp
     src/joystick.cpp
+    src/encoder.cpp
 )
 
 target_link_libraries(JoyBot PRIVATE gpiodcxx)
