@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <cstdint>
+#include <chrono>
 
 #include "hal/gpio_pin.h"
 #include "hal/memory_mapped_pin.h"
@@ -92,7 +93,9 @@ int main()
     right_encoder.start();
 
 	std::cout << "[INFO] Encoders started. Monitoring pulses...\n";
-	unsigned int loop_count = 0;
+	using clock_t = std::chrono::steady_clock;
+	auto last_sample = clock_t::now();
+	constexpr std::chrono::milliseconds SAMPLE_PERIOD{100}; // 100ms window
 
 	while (true)
 	{
@@ -148,13 +151,19 @@ int main()
 		left_motor.set_speed(motor_speed_left);
 		right_motor.set_speed(motor_speed_right);
 
-		// Print encoder counts every 60 loops (~1 second)
-		if (++loop_count % 60 == 0) {
-			std::uint32_t left_count = left_encoder.get_count();
-			std::uint32_t right_count = right_encoder.get_count();
-			std::cout << "[Encoder] Left: " << left_count << " | Right: " << right_count << "\n";
+		// Time-based sampling (no assumption about exact loop duration)
+		auto now = clock_t::now();
+		if (now - last_sample >= SAMPLE_PERIOD) {
+			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sample).count();
+			last_sample = now;
+			// Get pulses in this elapsed window (atomic fetch & reset)
+			std::uint32_t left_pulses = left_encoder.get_and_reset();
+			std::uint32_t right_pulses = right_encoder.get_and_reset();
+			// Print only raw pulse counts for this sampling window
+			std::cout << "[Enc 100ms] L:" << left_pulses << " | R:" << right_pulses << std::endl;
 		}
 
-		usleep(16000);
+		// Loop pacing (~50Hz) - not critical for timing accuracy
+		usleep(20000); // 20ms
 	}
 }
