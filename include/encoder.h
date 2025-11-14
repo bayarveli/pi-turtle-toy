@@ -11,16 +11,16 @@
 #include <memory>
 #include <cstdint>
 
-#include "hal/gpio_input_pin.h"
+#include "../hal/gpio_input_pin.h"
 
 class Encoder {
  public:
   // Constructor: gpio_pin is the sysfs GPIO number (e.g., "535" for your system)
   // Default to EDGE_RISING for 20 counts/rev (matching 20 PPR spec)
   // Use EDGE_BOTH for 40 counts/rev (2x resolution) if needed
-  explicit Encoder(const std::string& gpio_pin, 
+  explicit Encoder(const std::string& gpio_pin,
                    const std::string& edge_type = GpioInputPin::EDGE_RISING);
-  
+
   ~Encoder();
 
   // Delete copy and move operations
