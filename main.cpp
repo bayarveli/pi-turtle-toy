@@ -81,12 +81,12 @@ int main()
      *   +-------------+-----------+-----------+----------+
      * Note: Use BCM GPIO numbers for the Encoder constructor
      */
-    Encoder left_encoder("17", GpioInputPin::EDGE_RISING);
-    Encoder right_encoder("27", GpioInputPin::EDGE_RISING);
-	
+    Encoder left_encoder("529", GpioInputPin::EDGE_RISING);
+    Encoder right_encoder("539", GpioInputPin::EDGE_RISING);
+
 	Joystick usb_joystick;
 	usb_joystick.open(JOYSTICK_DEVICE_PATH );
-	
+
 	left_motor.stop();
 	right_motor.stop();
     left_encoder.start();
