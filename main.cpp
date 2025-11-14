@@ -95,7 +95,7 @@ int main()
 	std::cout << "[INFO] Encoders started. Monitoring pulses...\n";
 	using clock_t = std::chrono::steady_clock;
 	auto last_sample = clock_t::now();
-	constexpr std::chrono::milliseconds SAMPLE_PERIOD{100}; // 100ms window
+	constexpr std::chrono::milliseconds SAMPLE_PERIOD{500};
 
 	while (true)
 	{
@@ -110,7 +110,7 @@ int main()
 			}
 			std::cout << "[INFO] Input device reconnected." << std::endl;
 		}
-		
+
 		usb_joystick.poll();
 
 		auto steering_axis_value = usb_joystick.axis_state(0);
@@ -154,13 +154,12 @@ int main()
 		// Time-based sampling (no assumption about exact loop duration)
 		auto now = clock_t::now();
 		if (now - last_sample >= SAMPLE_PERIOD) {
-			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sample).count();
 			last_sample = now;
 			// Get pulses in this elapsed window (atomic fetch & reset)
 			std::uint32_t left_pulses = left_encoder.get_and_reset();
 			std::uint32_t right_pulses = right_encoder.get_and_reset();
 			// Print only raw pulse counts for this sampling window
-			std::cout << "[Enc 100ms] L:" << left_pulses << " | R:" << right_pulses << std::endl;
+			std::cout << "[Enc 500ms] L:" << left_pulses << " | R:" << right_pulses << std::endl;
 		}
 
 		// Loop pacing (~50Hz) - not critical for timing accuracy
