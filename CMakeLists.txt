@@ -18,6 +18,7 @@ add_executable(GpiodTest
 )
 
 target_link_libraries(GpiodTest PRIVATE gpiodcxx)
+target_include_directories(GpiodTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 include(CTest)
 enable_testing()
