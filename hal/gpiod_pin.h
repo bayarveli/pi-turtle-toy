@@ -3,9 +3,12 @@
 
 #include <string>
 #include <memory>
+
 #include <gpiod.hpp>
 
-class GpiodPin {
+#include "digital_pin.h"
+
+class GpiodPin : public IDigitalPin {
 public:
   static constexpr const char* OUTPUT = "out";
   static constexpr const char* INPUT = "in";
@@ -20,14 +23,9 @@ public:
   GpiodPin(GpiodPin&&) = default;
   GpiodPin& operator=(GpiodPin&&) = default;
 
-  // Set GPIO direction ("in" or "out"). Re-requests the line if needed.
-  void set_direction(const std::string& direction);
-
-  // Set GPIO output value ("1" or "0"). Requires OUTPUT direction.
-  void set_value(const std::string& value);
-
-  // Get current GPIO value (returns "1" or "0"). Works for input or output.
-  void get_value(std::string& value);
+  void set_direction(PinDirection dir) override;
+  void set_value(PinValue val) override;
+  PinValue read_value() override;
 
 private:
   std::string consumer_;
