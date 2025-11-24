@@ -35,12 +35,12 @@ int main() {
       //   request.set_value(17, ::gpiod::line::value::INACTIVE);
 
       GpiodPin pin(17, "GpiodTest", "/dev/gpiochip0");
-      pin.set_direction(GpiodPin::OUTPUT);
+      pin.set_direction(PinDirection::OUTPUT);
 
       while (true) {
-        pin.set_value(GpiodPin::HIGH);
+        pin.set_value(PinValue::HIGH);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        pin.set_value(GpiodPin::LOW);
+        pin.set_value(PinValue::LOW);
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
       }
     } catch (const std::exception& e) {
