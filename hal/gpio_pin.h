@@ -6,7 +6,9 @@
 
 #include <string>
 
-class GpioPin {
+#include "digital_pin.h"
+
+class GpioPin : public IDigitalPin {
  public:
   static inline const std::string OUTPUT = "out";
   static inline const std::string INPUT = "in";
@@ -40,14 +42,13 @@ class GpioPin {
   GpioPin(GpioPin&&) = delete;
   GpioPin& operator=(GpioPin&&) = delete;
 
-  // Set GPIO pin direction (INPUT or OUTPUT)
-  void set_direction(const std::string& direction);
+  void set_direction(PinDirection dir) override;
 
   // Set GPIO pin value (HIGH or LOW)
-  void set_value(const std::string& value);
+  void set_value(PinValue val) override;
 
   // Get current GPIO pin value
-  void get_value(std::string& value);
+  PinValue read_value() override;
 
  private:
   // Export GPIO pin to make it available for use
