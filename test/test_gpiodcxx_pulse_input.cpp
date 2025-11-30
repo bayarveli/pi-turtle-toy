@@ -1,20 +1,21 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <poll.h>
 
 #include <gpiod.hpp>
 
 int main() {
     try {
         auto request =
-            ::gpiod::chip chip("/dev/gpiochip0")
+            ::gpiod::chip("/dev/gpiochip0")
             .prepare_request()
             .set_consumer("async_pulse_counter")
             .add_line_settings(
                 27,
                 ::gpiod::line_settings()
                     .set_direction(::gpiod::line::direction::INPUT)
-                    .set_edge_detection(::gpiod::line_settings::edge_detection::BOTH)
+                    .set_edge_detection(::gpiod::line::edge::BOTH)
             )
             .do_request();
 
@@ -31,7 +32,7 @@ int main() {
         for (;;) {
             auto ret = poll(&pollfd, 1, 100); // 100ms timeout for periodic print
             if (ret == -1) {
-                ::std::cerr << "error waiting for event: " << strerror(errno) << '\n';
+                ::std::cerr << "error waiting for event: " << '\n';
                 return EXIT_FAILURE;
             }
 
