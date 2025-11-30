@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "hal/gpio_pin.h"
+#include "hal/gpiod_pin.h"
 #include "hal/memory_mapped_pin.h"
 #include "motor.h"
 #include "hal/pwm.h"
@@ -61,12 +61,12 @@ int main()
 	 *   +------+---------+-----------+-----------+----------+
 	 * Note: sysfs IDs on this system appear to be (base 512 + BCM).
 	 */
-	GpioPin right_motor_in1("535");
-	GpioPin right_motor_in2("536");
+	GpiodPin right_motor_in1(23, "Joybot", "/dev/gpiochip0");
+	GpiodPin right_motor_in2(24, "Joybot", "/dev/gpiochip0");
 	Motor right_motor(right_motor_in1, right_motor_in2, motor_pwm, 1);
 
-	GpioPin left_motor_in1("517");
-	GpioPin left_motor_in2("518");
+	GpiodPin left_motor_in1(5, "Joybot", "/dev/gpiochip0");
+	GpiodPin left_motor_in2(6, "Joybot", "/dev/gpiochip0");
 	Motor left_motor(left_motor_in1, left_motor_in2, motor_pwm, 0);
 
 	left_motor.stop();

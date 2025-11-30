@@ -4,12 +4,13 @@ project(JoyBot VERSION 0.1.0 LANGUAGES C CXX)
 add_executable(JoyBot 
     main.cpp
     hal/memory_mapped_pin.cpp
-    hal/gpio_pin.cpp
+    hal/gpiod_pin.cpp
     hal/pwm.cpp
     src/motor.cpp
     src/joystick.cpp
 )
 
+target_link_libraries(JoyBot PRIVATE gpiodcxx)
 target_include_directories(JoyBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 include(CTest)
