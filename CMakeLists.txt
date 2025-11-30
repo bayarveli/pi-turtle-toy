@@ -12,6 +12,12 @@ add_executable(JoyBot
 
 target_include_directories(JoyBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
+add_executable(GpiodTest
+    test_main.cpp
+)
+
+target_link_libraries(GpiodTest PRIVATE gpiodcxx)
+
 include(CTest)
 enable_testing()
 
