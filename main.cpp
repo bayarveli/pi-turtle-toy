@@ -81,16 +81,16 @@ int main()
      *   +-------------+-----------+-----------+----------+
      * Note: Use BCM GPIO numbers for the Encoder constructor
      */
-    Encoder left_encoder("529", GpioInputPin::EDGE_RISING);
-    Encoder right_encoder("539", GpioInputPin::EDGE_RISING);
+    // Encoder left_encoder("529", GpioInputPin::EDGE_RISING);
+    // Encoder right_encoder("539", GpioInputPin::EDGE_RISING);
 
 	Joystick usb_joystick;
 	usb_joystick.open(JOYSTICK_DEVICE_PATH );
 
 	left_motor.stop();
 	right_motor.stop();
-    left_encoder.start();
-    right_encoder.start();
+    // left_encoder.start();
+    // right_encoder.start();
 
 	std::cout << "[INFO] Encoders started. Monitoring pulses...\n";
 	using clock_t = std::chrono::steady_clock;
@@ -151,17 +151,17 @@ int main()
 		left_motor.set_speed(motor_speed_left);
 		right_motor.set_speed(motor_speed_right);
 
-		// Time-based sampling (no assumption about exact loop duration)
-		auto now = clock_t::now();
-		if (now - last_sample >= SAMPLE_PERIOD) {
-			auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sample).count();
-			last_sample = now;
-			// Get pulses in this elapsed window (atomic fetch & reset)
-			std::uint32_t left_pulses = left_encoder.get_and_reset();
-			std::uint32_t right_pulses = right_encoder.get_and_reset();
-			// Print only raw pulse counts for this sampling window
-			std::cout << "[Enc 100ms] L:" << left_pulses << " | R:" << right_pulses << std::endl;
-		}
+		// // Time-based sampling (no assumption about exact loop duration)
+		// auto now = clock_t::now();
+		// if (now - last_sample >= SAMPLE_PERIOD) {
+		// 	auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_sample).count();
+		// 	last_sample = now;
+		// 	// Get pulses in this elapsed window (atomic fetch & reset)
+		// 	std::uint32_t left_pulses = left_encoder.get_and_reset();
+		// 	std::uint32_t right_pulses = right_encoder.get_and_reset();
+		// 	// Print only raw pulse counts for this sampling window
+		// 	std::cout << "[Enc 100ms] L:" << left_pulses << " | R:" << right_pulses << std::endl;
+		// }
 
 		// Loop pacing (~50Hz) - not critical for timing accuracy
 		usleep(20000); // 20ms
