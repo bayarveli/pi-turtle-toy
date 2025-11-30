@@ -14,6 +14,13 @@ add_executable(test_gpiodcxx_pulse_output
 )
 
 target_link_libraries(test_gpiodcxx_pulse_output PRIVATE gpiodcxx)
+
+add_executable(test_gpiodcxx_pulse_input
+    test_gpiodcxx_pulse_input.cpp
+)
+
+target_link_libraries(test_gpiodcxx_pulse_input PRIVATE gpiodcxx)
+
 include(CTest)
 enable_testing()
 
