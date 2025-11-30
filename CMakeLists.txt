@@ -4,7 +4,6 @@ project(JoyBot VERSION 0.1.0 LANGUAGES C CXX)
 add_executable(JoyBot 
     main.cpp
     hal/memory_mapped_pin.cpp
-    # hal/gpio_pin.cpp
     hal/gpiod_pin.cpp
     hal/pwm.cpp
     src/motor.cpp
@@ -13,14 +12,6 @@ add_executable(JoyBot
 
 target_link_libraries(JoyBot PRIVATE gpiodcxx)
 target_include_directories(JoyBot PRIVATE ${CMAKE_SOURCE_DIR}/include)
-
-add_executable(GpiodTest 
-    hal/gpiod_pin.cpp
-    test_main.cpp
-)
-
-target_link_libraries(GpiodTest PRIVATE gpiodcxx)
-target_include_directories(GpiodTest PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
 include(CTest)
 enable_testing()
