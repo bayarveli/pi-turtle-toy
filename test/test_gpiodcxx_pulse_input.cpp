@@ -15,13 +15,13 @@ int main() {
                 27,
                 ::gpiod::line_settings()
                     .set_direction(::gpiod::line::direction::INPUT)
-                    .set_edge_detection(::gpiod::line::edge::BOTH)
+                    .set_edge_detection(::gpiod::line::edge::RISING)
                     .set_bias(::gpiod::line::bias::PULL_UP)
-                    .set_debounce_period(std::chrono::microseconds(5000)) // 1ms debounce
+                    .set_debounce_period(std::chrono::microseconds(1000))
             )
             .do_request();
 
-        ::gpiod::edge_event_buffer event_buffer(1);
+        ::gpiod::edge_event_buffer event_buffer(64);
 
         struct pollfd pollfd;
         pollfd.fd = request.fd();
