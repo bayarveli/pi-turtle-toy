@@ -16,7 +16,6 @@ int main() {
                 ::gpiod::line_settings()
                     .set_direction(::gpiod::line::direction::INPUT)
                     .set_edge_detection(::gpiod::line::edge::RISING)
-                    .set_debounce_period(std::chrono::microseconds(50000))
             )
             .do_request();
 
