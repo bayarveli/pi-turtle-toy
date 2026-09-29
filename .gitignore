@@ -1,44 +1,10 @@
-# Prerequisites
-*.d
+# ESP-IDF build output
+/build/
+/sdkconfig
+/sdkconfig.old
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+# ESP-IDF managed component downloads
+/managed_components/
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# debug information files
-*.dwo
-
-# Build
-build/
+# VS Code local workspace settings
+/.vscode/
