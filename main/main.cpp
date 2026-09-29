@@ -7,8 +7,10 @@
 
 namespace {
 constexpr gpio_num_t kRgbLedGpio = GPIO_NUM_48;
-constexpr uint32_t kBlinkPeriodMs = 500;
-constexpr uint8_t kGreenBrightness = 32;
+constexpr uint32_t kFlashDurationMs = 100;
+constexpr uint32_t kFlashGapMs = 100;
+constexpr uint32_t kColorGapMs = 250;
+constexpr uint8_t kFlashBrightness = 48;
 constexpr char kTag[] = "joybot";
 
 led_strip_handle_t create_rgb_led()
@@ -30,6 +32,17 @@ led_strip_handle_t create_rgb_led()
     ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &strip));
     return strip;
 }
+
+void flash_color(led_strip_handle_t strip, uint8_t red, uint8_t green, uint8_t blue)
+{
+    ESP_ERROR_CHECK(led_strip_set_pixel(strip, 0, red, green, blue));
+    ESP_ERROR_CHECK(led_strip_refresh(strip));
+    vTaskDelay(pdMS_TO_TICKS(kFlashDurationMs));
+
+    ESP_ERROR_CHECK(led_strip_clear(strip));
+    ESP_ERROR_CHECK(led_strip_refresh(strip));
+    vTaskDelay(pdMS_TO_TICKS(kFlashGapMs));
+}
 } // namespace
 
 extern "C" void app_main(void)
@@ -38,11 +51,13 @@ extern "C" void app_main(void)
     led_strip_handle_t rgb_led = create_rgb_led();
 
     while (true) {
-        ESP_ERROR_CHECK(led_strip_set_pixel(rgb_led, 0, 0, kGreenBrightness, 0));
-        ESP_ERROR_CHECK(led_strip_refresh(rgb_led));
-        vTaskDelay(pdMS_TO_TICKS(kBlinkPeriodMs));
+        // Double red flash, then double blue flash, like a police beacon.
+        flash_color(rgb_led, kFlashBrightness, 0, 0);
+        flash_color(rgb_led, kFlashBrightness, 0, 0);
+        vTaskDelay(pdMS_TO_TICKS(kColorGapMs));
 
-        ESP_ERROR_CHECK(led_strip_clear(rgb_led));
-        vTaskDelay(pdMS_TO_TICKS(kBlinkPeriodMs));
+        flash_color(rgb_led, 0, 0, kFlashBrightness);
+        flash_color(rgb_led, 0, 0, kFlashBrightness);
+        vTaskDelay(pdMS_TO_TICKS(kColorGapMs));
     }
 }

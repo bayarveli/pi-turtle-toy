@@ -2,7 +2,7 @@
 
 This repository's `esp32-s3-port` branch is the ESP-IDF firmware project for JoyBot. The previous Raspberry Pi/Linux project is preserved under [`legacy/`](legacy/).
 
-The first firmware milestone blinks the onboard addressable RGB LED green/off. Motor and joystick functionality will be ported in later steps.
+The first firmware milestone drives the onboard addressable RGB LED with alternating double red and blue flashes. Motor and joystick functionality will be ported in later steps.
 
 ## Hardware
 
@@ -17,7 +17,7 @@ Connect the board to the PC using its USB-to-UART port and a data-capable USB ca
 3. Run **ESP-IDF: Set Espressif Device Target** and select `esp32s3`.
 4. Run **ESP-IDF: Build your project**.
 5. Connect the board and run **ESP-IDF: Flash your project**. Select the board's COM port if prompted.
-6. Run **ESP-IDF: Monitor your device**. The onboard RGB LED should blink green/off every half-second.
+6. Run **ESP-IDF: Monitor your device**. The onboard RGB LED should flash red twice, pause, then flash blue twice, repeating.
 
 The component manager downloads `espressif/led_strip` as a managed dependency during the first build.
 
