@@ -1,6 +1,7 @@
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "ble_control.h"
 #include "led_strip.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -35,6 +36,9 @@ led_strip_handle_t create_rgb_led()
 
 void flash_color(led_strip_handle_t strip, uint8_t red, uint8_t green, uint8_t blue)
 {
+    if (!ble_control_blinking_enabled()) {
+        return;
+    }
     ESP_ERROR_CHECK(led_strip_set_pixel(strip, 0, red, green, blue));
     ESP_ERROR_CHECK(led_strip_refresh(strip));
     vTaskDelay(pdMS_TO_TICKS(kFlashDurationMs));
@@ -49,8 +53,16 @@ extern "C" void app_main(void)
 {
     ESP_LOGI(kTag, "Starting JoyBot RGB LED blink on GPIO %d", kRgbLedGpio);
     led_strip_handle_t rgb_led = create_rgb_led();
+    ble_control_start();
 
     while (true) {
+        if (!ble_control_blinking_enabled()) {
+            ESP_ERROR_CHECK(led_strip_clear(rgb_led));
+            ESP_ERROR_CHECK(led_strip_refresh(rgb_led));
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
+        }
+
         // Double red flash, then double blue flash, like a police beacon.
         flash_color(rgb_led, kFlashBrightness, 0, 0);
         flash_color(rgb_led, kFlashBrightness, 0, 0);
@@ -61,3 +73,4 @@ extern "C" void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(kColorGapMs));
     }
 }
+
