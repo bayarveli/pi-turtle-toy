@@ -2,11 +2,11 @@
 
 This repository's `esp32-s3-port` branch is the ESP-IDF firmware project for JoyBot. The previous Raspberry Pi/Linux project is preserved under [`legacy/`](legacy/).
 
-The firmware drives the onboard addressable RGB LED with alternating double red and blue flashes. A reusable ESP-IDF driver for the 4tronix L298N dual H-bridge is also included; joystick input and board-specific motor pin assignments are not configured yet.
+The firmware drives the onboard addressable RGB LED with alternating double red and blue flashes. A reusable ESP-IDF driver for the 4tronix L298N dual H-bridge and a board-specific motor/encoder pin map are included. Motor control is not started by the application.
 
 ## Hardware
 
-This app targets an Espressif **ESP32-S3 development board** with the onboard addressable RGB LED connected to GPIO48 (such as ESP32-S3-DevKitC-1 or ESP32-S3-DevKitM-1). The LED is driven using Espressif's `led_strip` component over RMT. Check the board marking and revision before flashing; other ESP32-S3 boards may use a different LED pin or may not have an onboard RGB LED. See the [ESP32-S3-DevKitC-1 guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html) and [DevKitM-1 guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitm-1/user_guide.html).
+This app targets the diymore **ESP32-S3-DevKitC-1 N16R8** with its onboard addressable RGB LED on GPIO48. The LED is driven using Espressif's `led_strip` component over RMT. Check the board marking and revision before flashing; other ESP32-S3 boards may use a different LED pin or may not have an onboard RGB LED. See the [ESP32-S3-DevKitC-1 guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html).
 
 Connect the board to the PC using its USB-to-UART port and a data-capable USB cable. The board's native USB port may also support flashing and serial/JTAG, depending on board setup; USB-to-UART is the default for these instructions.
 
@@ -23,9 +23,23 @@ The component manager downloads `espressif/led_strip` as a managed dependency du
 
 ## L298N motor driver
 
-`main/motor_driver.hpp` provides `L298NMotorDriver` for two brushed DC motors. Supply the ESP32-S3 GPIO pins connected to each channel's `ENA`/`ENB`, `IN1`/`IN2`, and `IN3`/`IN4` inputs. The driver uses 20 kHz, 8-bit LEDC PWM on the enable pins; `set_speed(MotorSide::Left, speed)` and `set_speed(MotorSide::Right, speed)` accept signed values from `-255` to `255` (negative is reverse). Call `init()` before controlling motors and check each returned `esp_err_t`.
+`main/motor_driver.hpp` provides `L298NMotorDriver` for two brushed DC motors. The selected ESP32-S3-DevKitC-1 pin map is:
 
-Remove the module's ENA/ENB jumpers when using PWM. Power the motors from the module's motor supply, connect the ESP32-S3 ground to the module ground, and do not power motors from an ESP32 GPIO or its 3.3 V pin. The module's listed maximum is 2 A continuous per channel (3 A peak); observe the motor and module thermal limits. Assign pins for the specific development board before constructing the driver; the application does not start the motors automatically.
+| Board GPIO | Connect to |
+|---|---|
+| GPIO4 | L298N ENA (left motor PWM) |
+| GPIO5 | L298N IN1 |
+| GPIO6 | L298N IN2 |
+| GPIO7 | L298N ENB (right motor PWM) |
+| GPIO15 | L298N IN3 |
+| GPIO16 | L298N IN4 |
+| GPIO17 | Left wheel encoder pulse output |
+| GPIO18 | Right wheel encoder pulse output |
+| GPIO48 | Onboard RGB LED (reserved by this app) |
+
+The pin map is defined and printed at boot in `main/main.cpp`; it is not yet used to initialize or run the motor controller. Verify the physical board pin labels and wire the encoder outputs so they never exceed the ESP32-S3's 3.3 V GPIO limit. The driver uses 20 kHz, 8-bit LEDC PWM on the enable pins; `set_speed(MotorSide::Left, speed)` and `set_speed(MotorSide::Right, speed)` accept signed values from `-255` to `255` (negative is reverse). Call `init()` before controlling motors and check each returned `esp_err_t`.
+
+Remove the module's ENA/ENB jumpers when using PWM. Power the motors from the module's motor supply, connect the ESP32-S3 ground to the module ground, and do not power motors from an ESP32 GPIO or its 3.3 V pin. The module's listed maximum is 2 A continuous per channel (3 A peak); observe the motor and module thermal limits. The application does not start the motors automatically.
 
 ## Differential-drive velocity control
 
@@ -33,9 +47,9 @@ Remove the module's ENA/ENB jumpers when using PWM. Power the motors from the mo
 
 All physical calibration is explicit: configure the effective wheel radius, wheel center-to-center track, maximum wheel angular speed, and measured encoder rising-edge counts per wheel revolution. The ROB0005/FIT0003 wheel's published diameter is 65 mm (nominal radius 0.0325 m), but rolling radius and track should be measured on the assembled robot. Measure encoder counts by rotating a wheel through one full revolution; this implementation counts rising edges only. Set nonnegative PID gains for the wheel-speed loop and tune them on hardware, starting with the wheels raised and a low speed command. A zero-gain PID is rejected.
 
-The SEN0038 is single-channel: pulse frequency gives speed magnitude, while direction is inferred from the commanded motor direction. It cannot detect a wheel being externally driven backward, and this controller is not odometry. Wheel slip, motor variation, supply voltage, and L298N voltage drop mean chassis speed still requires calibration. The current application deliberately has no board-specific motor/encoder pin assignment and does not instantiate this controller.
+The SEN0038 is single-channel: pulse frequency gives speed magnitude, while direction is inferred from the commanded motor direction. It cannot detect a wheel being externally driven backward, and this controller is not odometry. Wheel slip, motor variation, supply voltage, and L298N voltage drop mean chassis speed still requires calibration. The current application does not instantiate this controller; measure encoder counts and tune the physical control parameters before enabling it.
 
-Example setup (replace GPIOs and measured/tuned values for the actual board):
+Example setup (use the configured GPIO map above and replace the measured/tuned values for the robot):
 
 ```cpp
 #include "differential_drive_controller.hpp"

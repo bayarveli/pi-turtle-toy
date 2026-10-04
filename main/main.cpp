@@ -2,12 +2,16 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "ble_control.h"
+#include "differential_drive_controller.hpp"
 #include "led_strip.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 namespace {
 constexpr gpio_num_t kRgbLedGpio = GPIO_NUM_48;
+constexpr MotorPins kLeftMotorPins{GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6};
+constexpr MotorPins kRightMotorPins{GPIO_NUM_7, GPIO_NUM_15, GPIO_NUM_16};
+constexpr WheelEncoderPins kEncoderPins{GPIO_NUM_17, GPIO_NUM_18};
 constexpr uint32_t kFlashDurationMs = 100;
 constexpr uint32_t kFlashGapMs = 100;
 constexpr uint32_t kColorGapMs = 250;
@@ -52,6 +56,12 @@ void flash_color(led_strip_handle_t strip, uint8_t red, uint8_t green, uint8_t b
 extern "C" void app_main(void)
 {
     ESP_LOGI(kTag, "Starting JoyBot RGB LED blink on GPIO %d", kRgbLedGpio);
+    ESP_LOGI(kTag,
+             "DevKitC-1 pin map: L298N left ENA/IN1/IN2=%d/%d/%d, right "
+             "ENB/IN3/IN4=%d/%d/%d; encoder left/right=%d/%d",
+             kLeftMotorPins.enable, kLeftMotorPins.input_a, kLeftMotorPins.input_b,
+             kRightMotorPins.enable, kRightMotorPins.input_a, kRightMotorPins.input_b,
+             kEncoderPins.left, kEncoderPins.right);
     led_strip_handle_t rgb_led = create_rgb_led();
     ble_control_start();
 
@@ -73,5 +83,4 @@ extern "C" void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(kColorGapMs));
     }
 }
-
 
