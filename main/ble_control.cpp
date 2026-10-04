@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "host/ble_hs.h"
 #include "host/util/util.h"
@@ -16,6 +17,8 @@
 namespace {
 constexpr char kTag[] = "ble";
 constexpr char kDeviceName[] = "JoyBot";
+constexpr int kMaxSpeedLevel = 5;
+constexpr int64_t kCommandTimeoutUs = 500'000;
 
 std::atomic<bool> g_blinking{true};
 uint8_t g_own_addr_type;
@@ -33,24 +36,41 @@ const ble_uuid16_t kHm10Char = BLE_UUID16_INIT(0xFFE1);
 
 void start_advertising();
 
-// Accepts text ("start"/"stop", "on"/"off", "1"/"0", "A"/"B") or raw bytes 0x01/0x00.
+std::atomic<uint8_t> g_keys{0};
+std::atomic<int> g_speed_level{3};
+std::atomic<int64_t> g_last_rx_us{0};
+
+enum Key : uint8_t { kUp = 1, kRight = 2, kDown = 4, kLeft = 8 };
+
+// App sends an uppercase letter on press and the lowercase one on release.
+// D-pad: A up, B right, C down, D left. Actions: E blink on, G blink off, F faster, H slower.
 void handle_command(const uint8_t *data, uint16_t len)
 {
-    char text[32] = {};
-    for (uint16_t i = 0; i < len && i < sizeof(text) - 1; ++i) {
-        text[i] = static_cast<char>(std::tolower(data[i]));
+    for (uint16_t i = 0; i < len; ++i) {
+        const char ch = static_cast<char>(data[i]);
+        const bool pressed = std::isupper(static_cast<unsigned char>(ch));
+        uint8_t key = 0;
+        switch (std::toupper(static_cast<unsigned char>(ch))) {
+        case 'A': key = kUp; break;
+        case 'B': key = kRight; break;
+        case 'C': key = kDown; break;
+        case 'D': key = kLeft; break;
+        case 'E': if (pressed) g_blinking = true; break;
+        case 'G': if (pressed) g_blinking = false; break;
+        case 'F': if (pressed && g_speed_level < kMaxSpeedLevel) ++g_speed_level; break;
+        case 'H': if (pressed && g_speed_level > 1) --g_speed_level; break;
+        default: break;
+        }
+        if (key) {
+            if (pressed) {
+                g_keys |= key;
+            } else {
+                g_keys &= static_cast<uint8_t>(~key);
+            }
+        }
     }
-    ESP_LOGI(kTag, "RX %u bytes: \"%s\" first=0x%02x", len, text, len ? data[0] : 0);
-
-    if (strstr(text, "stop") || strstr(text, "off") || strcmp(text, "0") == 0 || strcmp(text, "b") == 0 ||
-        (len == 1 && data[0] == 0x00)) {
-        g_blinking = false;
-    } else if (strstr(text, "start") || strstr(text, "on") || strcmp(text, "1") == 0 || strcmp(text, "a") == 0 ||
-               (len == 1 && data[0] == 0x01)) {
-        g_blinking = true;
-    }
+    g_last_rx_us = esp_timer_get_time();
 }
-
 int rx_access(uint16_t, uint16_t, ble_gatt_access_ctxt *ctxt, void *)
 {
     if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
@@ -110,6 +130,9 @@ int gap_event(ble_gap_event *event, void *)
         }
         break;
     case BLE_GAP_EVENT_DISCONNECT:
+        g_keys = 0;
+        start_advertising();
+        break;
     case BLE_GAP_EVENT_ADV_COMPLETE:
         start_advertising();
         break;
@@ -182,4 +205,20 @@ bool ble_control_blinking_enabled()
     return g_blinking;
 }
 
+
+
+DriveInput ble_control_drive_input()
+{
+    DriveInput input{};
+    const uint8_t keys = g_keys;
+    const bool fresh = esp_timer_get_time() - g_last_rx_us < kCommandTimeoutUs;
+    // Hold timeout guards against a lost release letter.
+    if (keys == 0 || !fresh) {
+        return input;
+    }
+    const float scale = static_cast<float>(g_speed_level) / kMaxSpeedLevel;
+    input.linear = ((keys & kUp) ? scale : 0.0f) - ((keys & kDown) ? scale : 0.0f);
+    input.yaw = ((keys & kLeft) ? scale : 0.0f) - ((keys & kRight) ? scale : 0.0f);
+    return input;
+}
 
