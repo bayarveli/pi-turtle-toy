@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.16)
+project(JoyBotHostTests LANGUAGES CXX)
+
+enable_testing()
+
+add_executable(differential_drive_kinematics_test differential_drive_kinematics_test.cpp)
+target_compile_features(differential_drive_kinematics_test PRIVATE cxx_std_17)
+target_include_directories(differential_drive_kinematics_test PRIVATE ../main)
+add_test(NAME differential_drive_kinematics COMMAND differential_drive_kinematics_test)

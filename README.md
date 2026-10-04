@@ -2,7 +2,7 @@
 
 This repository's `esp32-s3-port` branch is the ESP-IDF firmware project for JoyBot. The previous Raspberry Pi/Linux project is preserved under [`legacy/`](legacy/).
 
-The first firmware milestone drives the onboard addressable RGB LED with alternating double red and blue flashes. Motor and joystick functionality will be ported in later steps.
+The firmware drives the onboard addressable RGB LED with alternating double red and blue flashes. A reusable ESP-IDF driver for the 4tronix L298N dual H-bridge is also included; joystick input and board-specific motor pin assignments are not configured yet.
 
 ## Hardware
 
@@ -20,6 +20,58 @@ Connect the board to the PC using its USB-to-UART port and a data-capable USB ca
 6. Run **ESP-IDF: Monitor your device**. The onboard RGB LED should flash red twice, pause, then flash blue twice, repeating.
 
 The component manager downloads `espressif/led_strip` as a managed dependency during the first build.
+
+## L298N motor driver
+
+`main/motor_driver.hpp` provides `L298NMotorDriver` for two brushed DC motors. Supply the ESP32-S3 GPIO pins connected to each channel's `ENA`/`ENB`, `IN1`/`IN2`, and `IN3`/`IN4` inputs. The driver uses 20 kHz, 8-bit LEDC PWM on the enable pins; `set_speed(MotorSide::Left, speed)` and `set_speed(MotorSide::Right, speed)` accept signed values from `-255` to `255` (negative is reverse). Call `init()` before controlling motors and check each returned `esp_err_t`.
+
+Remove the module's ENA/ENB jumpers when using PWM. Power the motors from the module's motor supply, connect the ESP32-S3 ground to the module ground, and do not power motors from an ESP32 GPIO or its 3.3 V pin. The module's listed maximum is 2 A continuous per channel (3 A peak); observe the motor and module thermal limits. Assign pins for the specific development board before constructing the driver; the application does not start the motors automatically.
+
+## Differential-drive velocity control
+
+`main/differential_drive_controller.hpp` adds `DifferentialDriveController`, which accepts chassis linear velocity in m/s and yaw rate in rad/s. It converts these to left/right wheel angular-speed targets, proportionally scales both if either exceeds the configured maximum, reads encoder pulse rates with ESP-IDF PCNT, and uses an independent PID state per wheel to set signed L298N PWM. Call `init()`, set velocity with `set_velocity(linear_mps, yaw_radps)`, and call `update()` from one control task at the configured period; call `set_velocity()`, `update()`, and `stop()` on the same task or serialize them externally. Early `update()` calls before the configured interval are harmless no-ops. `stop()` coasts both motors.
+
+All physical calibration is explicit: configure the effective wheel radius, wheel center-to-center track, maximum wheel angular speed, and measured encoder rising-edge counts per wheel revolution. The ROB0005/FIT0003 wheel's published diameter is 65 mm (nominal radius 0.0325 m), but rolling radius and track should be measured on the assembled robot. Measure encoder counts by rotating a wheel through one full revolution; this implementation counts rising edges only. Set nonnegative PID gains for the wheel-speed loop and tune them on hardware, starting with the wheels raised and a low speed command. A zero-gain PID is rejected.
+
+The SEN0038 is single-channel: pulse frequency gives speed magnitude, while direction is inferred from the commanded motor direction. It cannot detect a wheel being externally driven backward, and this controller is not odometry. Wheel slip, motor variation, supply voltage, and L298N voltage drop mean chassis speed still requires calibration. The current application deliberately has no board-specific motor/encoder pin assignment and does not instantiate this controller.
+
+Example setup (replace GPIOs and measured/tuned values for the actual board):
+
+```cpp
+#include "differential_drive_controller.hpp"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+extern const MotorPins kLeftMotorPins;
+extern const MotorPins kRightMotorPins;
+extern const WheelEncoderPins kEncoderPins;
+extern const float kMeasuredWheelTrackMeters;
+extern const int kMeasuredEncoderRisingEdgesPerRevolution;
+extern const float kCalibratedMaximumWheelRadiansPerSecond;
+extern const float kTunedKp;
+extern const float kTunedKi;
+extern const float kTunedKd;
+
+DifferentialDriveConfig config{};
+config.wheel_radius_meters = 0.0325f;
+config.wheel_track_meters = kMeasuredWheelTrackMeters;
+config.encoder_counts_per_wheel_revolution = kMeasuredEncoderRisingEdgesPerRevolution;
+config.max_wheel_radians_per_second = kCalibratedMaximumWheelRadiansPerSecond;
+config.control_period_ms = 20;
+config.kp = kTunedKp;
+config.ki = kTunedKi;
+config.kd = kTunedKd;
+
+L298NMotorDriver motors(kLeftMotorPins, kRightMotorPins);
+DifferentialDriveController drive(motors, kEncoderPins, config);
+ESP_ERROR_CHECK(drive.init());
+ESP_ERROR_CHECK(drive.set_velocity(0.15f, 0.0f));
+
+while (true) {
+	ESP_ERROR_CHECK(drive.update());
+	vTaskDelay(pdMS_TO_TICKS(config.control_period_ms));
+}
+```
 
 ## Build and flash from the ESP-IDF terminal
 
