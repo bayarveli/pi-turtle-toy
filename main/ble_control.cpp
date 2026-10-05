@@ -5,7 +5,6 @@
 #include <cstring>
 
 #include "esp_log.h"
-#include "esp_timer.h"
 #include "nvs_flash.h"
 #include "host/ble_hs.h"
 #include "host/util/util.h"
@@ -18,7 +17,6 @@ namespace {
 constexpr char kTag[] = "ble";
 constexpr char kDeviceName[] = "JoyBot";
 constexpr int kMaxSpeedLevel = 5;
-constexpr int64_t kCommandTimeoutUs = 500'000;
 
 std::atomic<bool> g_blinking{true};
 uint8_t g_own_addr_type;
@@ -37,12 +35,11 @@ const ble_uuid16_t kHm10Char = BLE_UUID16_INIT(0xFFE1);
 void start_advertising();
 
 std::atomic<uint8_t> g_keys{0};
-std::atomic<int> g_speed_level{3};
-std::atomic<int64_t> g_last_rx_us{0};
+std::atomic<int> g_speed_level{1};
 
 enum Key : uint8_t { kUp = 1, kRight = 2, kDown = 4, kLeft = 8 };
 
-// App sends an uppercase letter on press and the lowercase one on release.
+// App sends an uppercase letter on press and the lowercase one on release (ignored).
 // D-pad: A up, B right, C down, D left. Actions: E blink on, G blink off, F faster, H slower.
 void handle_command(const uint8_t *data, uint16_t len)
 {
@@ -57,19 +54,21 @@ void handle_command(const uint8_t *data, uint16_t len)
         case 'D': key = kLeft; break;
         case 'E': if (pressed) g_blinking = true; break;
         case 'G': if (pressed) g_blinking = false; break;
-        case 'F': if (pressed && g_speed_level < kMaxSpeedLevel) ++g_speed_level; break;
-        case 'H': if (pressed && g_speed_level > 1) --g_speed_level; break;
+        case 'F':
+            if (pressed && g_speed_level < kMaxSpeedLevel) ++g_speed_level;
+            break;
+        case 'H':
+            if (pressed && g_speed_level > 1) --g_speed_level;
+            break;
         default: break;
         }
-        if (key) {
-            if (pressed) {
-                g_keys |= key;
-            } else {
-                g_keys &= static_cast<uint8_t>(~key);
-            }
+        if (key && pressed) {
+            // Latched: a press sets the direction, the opposite press stops, releases are ignored.
+            const uint8_t opposite = (key == kUp) ? kDown : (key == kDown) ? kUp
+                                   : (key == kLeft) ? kRight : kLeft;
+            g_keys = (g_keys == opposite) ? 0 : key;
         }
     }
-    g_last_rx_us = esp_timer_get_time();
 }
 int rx_access(uint16_t, uint16_t, ble_gatt_access_ctxt *ctxt, void *)
 {
@@ -205,15 +204,11 @@ bool ble_control_blinking_enabled()
     return g_blinking;
 }
 
-
-
 DriveInput ble_control_drive_input()
 {
     DriveInput input{};
     const uint8_t keys = g_keys;
-    const bool fresh = esp_timer_get_time() - g_last_rx_us < kCommandTimeoutUs;
-    // Hold timeout guards against a lost release letter.
-    if (keys == 0 || !fresh) {
+    if (keys == 0) {
         return input;
     }
     const float scale = static_cast<float>(g_speed_level) / kMaxSpeedLevel;
@@ -221,4 +216,3 @@ DriveInput ble_control_drive_input()
     input.yaw = ((keys & kLeft) ? scale : 0.0f) - ((keys & kRight) ? scale : 0.0f);
     return input;
 }
-
